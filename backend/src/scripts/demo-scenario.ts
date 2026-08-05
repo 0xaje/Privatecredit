@@ -107,7 +107,7 @@ async function runDemo() {
     res = await fetch("http://localhost:3007/api/loans/offer", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-            requestId: 1, // First request
+            requestId: 2, // Second request
             aprBps: 400, // 4%
             duration: 86400 * 30, 
             requiredCollateral: 0,
@@ -121,7 +121,7 @@ async function runDemo() {
     res = await fetch("http://localhost:3007/api/loans/accept-offer", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-            offerId: 1,
+            offerId: 2,
             collateralAmount: 0
         })
     });
@@ -148,6 +148,41 @@ async function runDemo() {
     if (overRes.error) {
         step(`SUCCESS: Capacity Manager blocked the over-leverage attempt! Error: ${overRes.error}`);
     }
+
+    // ----------------------------------------------------
+    // STEP 5: LOAN REPAYMENT (RESTORES CAPACITY)
+    // ----------------------------------------------------
+    log("Step 5: Alice repays the 5,000 CTC loan");
+    
+    res = await fetch("http://localhost:3007/api/loans/repay", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+            loanId: 2, // Second loan
+            repaymentAmount: requestAmount.toString() // Mock simple principal repayment for demo
+        })
+    });
+    const repayRes = await res.json();
+    if (repayRes.success) {
+        step(`Loan Repaid successfully! Capacity restored. TxHash: ${repayRes.txHash}`);
+    } else {
+        step(`Repayment failed: ${repayRes.error}`);
+    }
+
+    // ----------------------------------------------------
+    // STEP 6: ARTEFACT SNAPSHOT
+    // ----------------------------------------------------
+    log("Step 6: Alice commits her graph snapshot as an Artefact");
+    
+    res = await fetch("http://localhost:3007/api/artefacts/commit", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+            snapshotCommitment: ethers.id(JSON.stringify(graph)),
+            eligibilityNonce: 1,
+            contentReference: "ipfs://mock-graph-cid"
+        })
+    });
+    const artefactRes = await res.json();
+    step(`Artefact Snapshotted to Registry! TxHash: ${artefactRes.txHash}`);
 
     log("Demo Scenario Complete!");
 }
