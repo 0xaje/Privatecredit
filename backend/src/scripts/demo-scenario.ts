@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { ethers } from 'ethers';
 import express from 'express';
 import { attestcoinRouter } from '../routes/attestcoin.routes';
@@ -23,8 +24,8 @@ const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 async function runDemo() {
     log("Starting PrivateCredit Graph API Demo (Whitepaper §22)");
     
-    // Alice's wallet address
-    const alice = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+    // Alice's wallet address (Using the funded Deployer Testnet Wallet)
+    const alice = process.env.BORROWER_PK ? new ethers.Wallet(process.env.BORROWER_PK).address : "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
     step(`Alice Wallet: ${alice}`);
     
     // ----------------------------------------------------
