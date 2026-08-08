@@ -138,6 +138,9 @@ contract LoanVault is Ownable, ReentrancyGuard, Pausable, ILoanVault {
 
         loan.status = LoanStatus.DEFAULTED;
 
+        // Release reserved capacity so the borrower isn't permanently locked out
+        capacityManager.releaseCapacity(loan.borrower, loan.principal);
+
         (bool success, ) = loan.lender.call{value: loan.collateralAmount}("");
         if (!success) revert TransferFailed();
 

@@ -23,6 +23,7 @@ export default buildModule("PrivateCreditModule", (m) => {
   m.call(capacityManager, "setAuthorizedCaller", [loanVault, true]);
   m.call(loanVault, "setMarketplace", [loanMarketplace]);
   m.call(loanVault, "setRepaymentRegistry", [repaymentRegistry]);
+  m.call(repaymentRegistry, "setAuthorizedRecorder", [loanVault]);
   
   // Also we need to set the backend registrar for the EligibilityRegistry. 
   // We'll use the deployer account as the registrar for local dev.

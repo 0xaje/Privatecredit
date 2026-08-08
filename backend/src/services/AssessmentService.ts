@@ -3,6 +3,7 @@ import { snapshotService } from './SnapshotService';
 import { policyEngine, PolicyOutput, riskTierToEnum } from '../policy/PolicyEngine';
 import { graphStore } from './GraphStore';
 import { CreditFeature } from './EvidenceNormalizer';
+import { attestcoinService } from './AttestcoinService';
 
 const USE_REAL_NETWORK = process.env.USE_REAL_NETWORK === 'true';
 const RPC_URL = USE_REAL_NETWORK 
@@ -76,7 +77,7 @@ export class AssessmentService {
                 policyOutput.validUntil,
                 policyOutput.policyVersion,
                 commitment,
-                ethers.ZeroHash // mock attestcoin context
+                attestcoinService.computeEvidenceContext(borrower) // real cross-chain evidence commitment
             );
             await tx.wait();
             console.log(`Registered! TxHash: ${tx.hash}`);

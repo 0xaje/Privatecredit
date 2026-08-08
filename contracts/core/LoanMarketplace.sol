@@ -9,6 +9,7 @@ import "../interfaces/ILoanMarketplace.sol";
 import "../interfaces/IEligibilityRegistry.sol";
 import "../interfaces/ICapacityManager.sol";
 import "../interfaces/ILoanVault.sol";
+import "../libraries/PolicyConstants.sol";
 
 contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace {
     mapping(uint256 => BorrowRequest) public requests;
@@ -25,6 +26,7 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
     error TermsOutOfBounds();
     error TransferFailed();
     error NotBorrower();
+    error InsufficientCollateral(uint256 required, uint256 provided);
 
     /**
      * @notice Constructor for LoanMarketplace
@@ -164,10 +166,16 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
         if (offer.status != OfferStatus.PENDING) revert OfferNotPending(offerId);
         if (msg.value != offer.requiredCollateral) revert TermsOutOfBounds();
 
+        // Enforce LTV from the borrower's eligibility record
+        uint256 principal = offerDeposits[offerId];
+        Eligibility memory elig = eligibilityRegistry.getEligibility(req.borrower);
+        if (elig.maxLtvBps > 0) {
+            uint256 requiredCollateral = (principal * elig.maxLtvBps) / PolicyConstants.BPS_DENOMINATOR;
+            if (msg.value < requiredCollateral) revert InsufficientCollateral(requiredCollateral, msg.value);
+        }
+
         req.status = RequestStatus.FUNDED;
         offer.status = OfferStatus.ACCEPTED;
-
-        uint256 principal = offerDeposits[offerId];
         offerDeposits[offerId] = 0;
         
         uint256 totalToSend = principal + msg.value;

@@ -1,8 +1,8 @@
 {
-  "PrivateCreditModule#ArtefactRegistry": "0x1AEA5A904E6d0DD6eE5281E7B5BbCBfaCb87dC37",
-  "PrivateCreditModule#EligibilityRegistry": "0x6E561CFC057409462E0fD8a290F9eB8957b3f67f",
-  "PrivateCreditModule#RepaymentRegistry": "0x1B9f1AA6F9d3D89dA9B209FA70D206bD6Dec1e4D",
-  "PrivateCreditModule#CapacityManager": "0x5cfbAe8B83556d78B8BC8D8D74dE15A6Be5EEAb3",
-  "PrivateCreditModule#LoanVault": "0x70EE13351431E8983783BCB7205745E564Bf4aB3",
-  "PrivateCreditModule#LoanMarketplace": "0xEF3504749da16afba32F34fF457E4AE400512B8B"
+  "PrivateCreditModule#ArtefactRegistry": "0x1D70b72Ad254535624F1f83d3DAf845416777B2F",
+  "PrivateCreditModule#EligibilityRegistry": "0x71777Ef0194E36C0eE5d17432D029ED052cBcAE2",
+  "PrivateCreditModule#RepaymentRegistry": "0x501FeEc3DB2Cbc612FD76E9E687Bf414d84884EC",
+  "PrivateCreditModule#CapacityManager": "0x4f55B2668e74d7AB350b7d105aAc8b914B9aEDBc",
+  "PrivateCreditModule#LoanVault": "0x2773338984c5036374E02496848335C24cBd975b",
+  "PrivateCreditModule#LoanMarketplace": "0x776645cD81Ab903c573De406615A2f4c429ca9cc"
 }

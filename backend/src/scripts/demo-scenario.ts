@@ -86,54 +86,73 @@ async function runDemo() {
     // ----------------------------------------------------
     // STEP 3: LENDING MARKETPLACE (REQUEST & FUND)
     // ----------------------------------------------------
-    log("Step 3: Alice requests a 5,000 CTC loan");
+    log("Step 3: Alice requests a 1,000 CTC loan with 500 CTC collateral (50% LTV)");
     
-    const requestAmount = ethers.parseEther("5000"); // 5,000 CTC
+    const requestAmount = ethers.parseEther("1000"); // 1,000 CTC
+    const collateralAmount = ethers.parseEther("500"); // 50% of principal (MEDIUM risk maxLtvBps = 5000)
+    
     res = await fetch("http://localhost:3007/api/loans/borrow-request", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
             amount: requestAmount.toString(),
             maxAprBps: 500, // 5%
             maxDuration: 86400 * 30, // 30 days
-            collateralAmount: 0 
+            collateralAmount: collateralAmount.toString() 
         })
     });
     
     const borrowRes = await res.json();
-    step(`Borrow Request created! TxHash: ${borrowRes.txHash}`);
+    if (borrowRes.success) {
+        step(`Borrow Request created! RequestId: ${borrowRes.requestId}, TxHash: ${borrowRes.txHash}`);
+    } else {
+        step(`Borrow Request FAILED: ${borrowRes.error}`);
+        throw new Error("Borrow request failed");
+    }
+    const requestId = borrowRes.requestId;
     
     log("Lender sees the request and makes an offer");
-    // Offer (Principal = 5000)
     res = await fetch("http://localhost:3007/api/loans/offer", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-            requestId: 2, // Second request
+            requestId: requestId,
             aprBps: 400, // 4%
             duration: 86400 * 30, 
-            requiredCollateral: 0,
+            requiredCollateral: collateralAmount.toString(),
             principal: requestAmount.toString()
         })
     });
+    const offerRes = await res.json();
+    if (offerRes.success) {
+        step(`Lender Offer created! OfferId: ${offerRes.offerId}, TxHash: ${offerRes.txHash}`);
+    } else {
+        step(`Lender Offer FAILED: ${offerRes.error}`);
+        throw new Error("Lender offer failed");
+    }
+    const offerId = offerRes.offerId;
     
-    step(`Lender Offer created!`);
-    
-    log("Alice accepts the offer");
+    log("Alice accepts the offer (sending 500 CTC collateral)");
     res = await fetch("http://localhost:3007/api/loans/accept-offer", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-            offerId: 2,
-            collateralAmount: 0
+            offerId: offerId,
+            collateralAmount: collateralAmount.toString()
         })
     });
-    
-    step(`Loan Originated! Capacity reduced by 5,000 CTC.`);
+    const acceptRes = await res.json();
+    if (acceptRes.success) {
+        step(`Loan Originated! LoanId: ${acceptRes.loanId}, Capacity reduced by 1,000 CTC. TxHash: ${acceptRes.txHash}`);
+    } else {
+        step(`Accept Offer FAILED: ${acceptRes.error}`);
+        throw new Error("Accept offer failed");
+    }
+    const loanId = acceptRes.loanId;
 
     // ----------------------------------------------------
     // STEP 4: CAPACITY ENFORCEMENT (EDGE CASE)
     // ----------------------------------------------------
-    log("Step 4: Alice attempts to borrow another 6,000 CTC (over her 10,000 max)");
+    log("Step 4: Alice attempts to borrow another 6,000 CTC (over her 5,000 max)");
     
-    const overAmount = ethers.parseEther("6000"); // 6,000 CTC (5k + 6k = 11k, > 10k max)
+    const overAmount = ethers.parseEther("6000"); // 6,000 CTC — exceeds remaining capacity
     res = await fetch("http://localhost:3007/api/loans/borrow-request", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -152,13 +171,22 @@ async function runDemo() {
     // ----------------------------------------------------
     // STEP 5: LOAN REPAYMENT (RESTORES CAPACITY)
     // ----------------------------------------------------
-    log("Step 5: Alice repays the 5,000 CTC loan");
+    log("Step 5: Alice repays the 1,000 CTC loan (with accrued interest)");
     
+    // First, query the exact amount owed (principal + accrued interest)
+    res = await fetch(`http://localhost:3007/api/loans/total-owed/${loanId}`);
+    const owedRes = await res.json();
+    const totalOwed = BigInt(owedRes.totalOwed);
+    step(`Total owed (principal + interest): ${ethers.formatEther(totalOwed)} CTC`);
+
+    // Add a 10 CTC buffer to account for mempool latency (interest accrues while transaction is pending)
+    const repaymentAmount = totalOwed + ethers.parseEther("10");
+
     res = await fetch("http://localhost:3007/api/loans/repay", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-            loanId: 2, // Second loan
-            repaymentAmount: requestAmount.toString() // Mock simple principal repayment for demo
+            loanId: loanId,
+            repaymentAmount: repaymentAmount.toString()
         })
     });
     const repayRes = await res.json();

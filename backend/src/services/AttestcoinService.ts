@@ -81,6 +81,24 @@ export class AttestcoinService {
         return req.mockResult;
     }
 
+    /**
+     * Computes a keccak256 commitment from all CONFIRMED verification requests
+     * for a given borrower. This serves as the real attestcoinContext passed
+     * to the on-chain EligibilityRegistry.
+     */
+    computeEvidenceContext(borrower: string): string {
+        const confirmed = [...this.requests.values()]
+            .filter(r => r.borrower.toLowerCase() === borrower.toLowerCase() && r.status === 'CONFIRMED');
+        if (confirmed.length === 0) return ethers.ZeroHash;
+
+        // Sort by requestId for deterministic ordering
+        confirmed.sort((a, b) => a.requestId.localeCompare(b.requestId));
+
+        // Pack all confirmed evidence into a single commitment
+        const packed = confirmed.map(r => `${r.chainId}:${r.txHash}:${r.eventType}:${r.requestId}`).join('|');
+        return ethers.id(packed); // keccak256 of the packed string
+    }
+
     private processMockVerification(requestId: string) {
         const req = this.requests.get(requestId);
         if (!req) return;
