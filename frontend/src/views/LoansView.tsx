@@ -14,6 +14,9 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
   const [showBorrowForm, setShowBorrowForm] = useState(false);
   const [borrowForm, setBorrowForm] = useState({ amount: '', maxAprBps: '1000', maxDuration: '2592000', collateral: '' });
   
+  const [showAcceptForm, setShowAcceptForm] = useState(false);
+  const [acceptForm, setAcceptForm] = useState({ offerId: '', collateralAmount: '' });
+  
   // Lender states
   const [showOfferForm, setShowOfferForm] = useState(false);
   const [offerForm, setOfferForm] = useState({ requestId: '', aprBps: '900', duration: '2592000', requiredCollateral: '', principal: '' });
@@ -46,6 +49,20 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
       setResult(`Request created! ID: ${res.requestId}, Tx: ${res.txHash?.slice(0, 10)}...`);
       onLoanAction();
       setShowBorrowForm(false);
+    } catch (err: any) {
+      setResult(`Error: ${err.message}`);
+    }
+    setSubmitting(false);
+  };
+
+  const handleAcceptSubmit = async () => {
+    setSubmitting(true);
+    setResult(null);
+    try {
+      const res = await api.acceptOffer(Number(acceptForm.offerId), acceptForm.collateralAmount);
+      setResult(`Offer accepted! Loan ID: ${res.loanId}, Tx: ${res.txHash?.slice(0, 10)}...`);
+      onLoanAction();
+      setShowAcceptForm(false);
     } catch (err: any) {
       setResult(`Error: ${err.message}`);
     }
@@ -122,9 +139,14 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
 
           {/* Create Borrow Request */}
           {!showBorrowForm ? (
-            <button className="primary-action-btn" onClick={() => setShowBorrowForm(true)} disabled={availNum <= 0}>
-              {availNum > 0 ? 'Create Borrow Request' : 'No Capacity Available'}
-            </button>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button className="primary-action-btn" onClick={() => setShowBorrowForm(true)} disabled={availNum <= 0}>
+                {availNum > 0 ? 'Create Borrow Request' : 'No Capacity Available'}
+              </button>
+              <button className="secondary-action-btn" onClick={() => setShowAcceptForm(true)}>
+                Accept Offer
+              </button>
+            </div>
           ) : (
             <div className="borrow-form">
               <div className="inspector-label">NEW BORROW REQUEST</div>
@@ -149,6 +171,26 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
                   {submitting ? 'Submitting...' : 'Submit Request'}
                 </button>
                 <button className="secondary-action-btn" onClick={() => setShowBorrowForm(false)}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {showAcceptForm && (
+            <div className="borrow-form" style={{ marginTop: '16px' }}>
+              <div className="inspector-label">ACCEPT LENDER OFFER</div>
+              <div className="form-field">
+                <label>Offer ID</label>
+                <input type="text" value={acceptForm.offerId} onChange={e => setAcceptForm({...acceptForm, offerId: e.target.value})} placeholder="0" />
+              </div>
+              <div className="form-field">
+                <label>Collateral Amount (wei)</label>
+                <input type="text" value={acceptForm.collateralAmount} onChange={e => setAcceptForm({...acceptForm, collateralAmount: e.target.value})} placeholder="500000000000000000" />
+              </div>
+              <div className="form-actions">
+                <button className="primary-action-btn" onClick={handleAcceptSubmit} disabled={submitting}>
+                  {submitting ? 'Submitting...' : 'Accept Offer'}
+                </button>
+                <button className="secondary-action-btn" onClick={() => setShowAcceptForm(false)}>Cancel</button>
               </div>
             </div>
           )}

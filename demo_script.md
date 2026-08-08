@@ -26,6 +26,8 @@
 * **Action:** Switch the toggle from 'Borrower' to 'Lender'.
 * **Speaking:** "A lender reviews the borrower's risk profile visually. Satisfied, they submit a competing offer via the Lender form."
 * **Action:** Fill out the lender offer and submit.
+* **Speaking:** "The borrower can then switch back to their view and accept the offer."
+* **Action:** Switch back to 'Borrower'. Click 'Accept Offer'. Enter the Offer ID and Collateral. Submit.
 * **Speaking:** "Once accepted, this creates a Loan Node, which tracks live repayment status from the `LoanVault`."
 
 ## 5. Judge & Audit Mode (1 min)
