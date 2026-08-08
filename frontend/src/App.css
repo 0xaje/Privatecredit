@@ -41,8 +41,24 @@
   transition: all 0.25s; display: flex; align-items: center; gap: 8px;
 }
 .wallet-btn:hover { background: rgba(129,140,248,0.18); box-shadow: 0 0 20px rgba(129,140,248,0.2); transform: translateY(-1px); }
+.wallet-btn:disabled { opacity: 0.6; cursor: wait; transform: none; }
 .wallet-btn.connected { border-color: var(--node-verified); color: var(--node-verified); }
 .wallet-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--node-verified); animation: pulseGlow 2s infinite; }
+
+/* Wallet Error Toast */
+.wallet-error-toast {
+  position: fixed; top: 76px; left: 50%; transform: translateX(-50%);
+  background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5; padding: 12px 20px; border-radius: 10px;
+  display: flex; align-items: center; gap: 10px; z-index: 100;
+  backdrop-filter: blur(16px); font-size: 0.9rem;
+  animation: slideUp 0.3s ease; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.wallet-error-toast button {
+  background: none; border: none; color: #fca5a5; cursor: pointer;
+  padding: 2px; display: flex; opacity: 0.7; transition: opacity 0.2s;
+}
+.wallet-error-toast button:hover { opacity: 1; }
 
 /* ═══════════════ LEFT PANEL ═══════════════ */
 .left-views {

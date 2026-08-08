@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Activity, LayoutDashboard, Shield, User, Plus, Zap, X } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Activity, LayoutDashboard, Shield, User, Plus, Zap, X, AlertTriangle } from 'lucide-react';
 import type { Node } from 'reactflow';
 import GraphCanvas from './components/GraphCanvas';
 import Inspector from './components/Inspector';
@@ -9,9 +9,6 @@ import JudgeView from './views/JudgeView';
 import { api } from './api/client';
 import './App.css';
 
-// Hardhat Account #1 (borrower) for demo
-const DEMO_BORROWER = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8';
-
 function App() {
   const [activeView, setActiveView] = useState('overview');
   const [wallet, setWallet] = useState<string | null>(null);
@@ -20,6 +17,8 @@ function App() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [showAddEvidence, setShowAddEvidence] = useState(false);
   const [evidenceNodeIds, setEvidenceNodeIds] = useState<string[]>([]);
+  const [connecting, setConnecting] = useState(false);
+  const [walletError, setWalletError] = useState<string | null>(null);
 
   // Bottom bar live data
   const [insightScore, setInsightScore] = useState<number | null>(null);
@@ -29,19 +28,70 @@ function App() {
     setRefreshTrigger(t => t + 1);
   }, []);
 
-  const handleConnect = () => {
-    setWallet(DEMO_BORROWER);
+  // ─── Wallet Connection ───
+  const handleConnect = async () => {
+    setConnecting(true);
+    setWalletError(null);
+
+    const eth = (window as any).ethereum;
+    if (!eth) {
+      setWalletError('No wallet detected. Please install MetaMask or another Web3 wallet.');
+      setConnecting(false);
+      return;
+    }
+
+    try {
+      const accounts: string[] = await eth.request({ method: 'eth_requestAccounts' });
+      if (accounts.length > 0) {
+        setWallet(accounts[0]);
+      } else {
+        setWalletError('No accounts returned. Please unlock your wallet.');
+      }
+    } catch (err: any) {
+      if (err.code === 4001) {
+        setWalletError('Connection rejected. Please approve the wallet request.');
+      } else {
+        setWalletError(err.message || 'Failed to connect wallet.');
+      }
+    }
+    setConnecting(false);
   };
 
-  // Fetch live stats for bottom bar
+  const handleDisconnect = () => {
+    setWallet(null);
+    setSelectedNode(null);
+    setEvidenceNodeIds([]);
+    setInsightScore(null);
+    setCapacity(null);
+    setJudgeMode(false);
+    setActiveView('overview');
+  };
+
+  // Listen for account changes from MetaMask
+  useEffect(() => {
+    const eth = (window as any).ethereum;
+    if (!eth) return;
+
+    const handleAccountsChanged = (accounts: string[]) => {
+      if (accounts.length === 0) {
+        handleDisconnect();
+      } else {
+        setWallet(accounts[0]);
+      }
+    };
+
+    eth.on('accountsChanged', handleAccountsChanged);
+    return () => eth.removeListener('accountsChanged', handleAccountsChanged);
+  }, []);
+
+  // ─── Fetch live stats ───
   useEffect(() => {
     if (!wallet) return;
-    
+
     api.getCapacity(wallet)
       .then(res => setCapacity({ available: res.availableCapacity, used: res.usedCapacity }))
-      .catch(() => {});
+      .catch(() => setCapacity(null));
 
-    // Fetch graph to get evidence node IDs for score preview
     api.getGraph(wallet)
       .then(data => {
         const evIds = (data.nodes || [])
@@ -50,16 +100,20 @@ function App() {
         setEvidenceNodeIds(evIds);
 
         if (evIds.length > 0) {
-          // Use the full evidence node IDs for the preview
           const nodeIds = (data.nodes || [])
             .filter((n: any) => n.type === 'EVIDENCE')
             .map((n: any) => n.id);
           api.previewScore(wallet, nodeIds)
             .then(res => setInsightScore(res.policy?.breakdown?.finalScore ?? null))
-            .catch(() => {});
+            .catch(() => setInsightScore(null));
+        } else {
+          setInsightScore(null);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        setEvidenceNodeIds([]);
+        setInsightScore(null);
+      });
   }, [wallet, refreshTrigger]);
 
   const handleInspectorAction = (action: string, data?: any) => {
@@ -89,18 +143,37 @@ function App() {
           <span className="nav-item">
             <Zap size={14} /> Creditcoin Testnet
           </span>
-          <span className="nav-item" style={{ color: judgeMode ? '#f59e0b' : undefined }}>
+          <span
+            className={`nav-item ${judgeMode ? 'judge-active' : ''}`}
+            onClick={() => {
+              setJudgeMode(!judgeMode);
+              if (!judgeMode) setActiveView('judge');
+              else setActiveView('overview');
+            }}
+            style={{ cursor: 'pointer', color: judgeMode ? '#f59e0b' : undefined }}
+          >
             ⚖ Judge: {judgeMode ? 'ON' : 'OFF'}
           </span>
           {wallet ? (
-            <button className="wallet-btn connected" onClick={() => setWallet(null)}>
+            <button className="wallet-btn connected" onClick={handleDisconnect}>
               <span className="wallet-dot" /> {wallet.slice(0, 6)}...{wallet.slice(-4)}
             </button>
           ) : (
-            <button className="wallet-btn" onClick={handleConnect}>Connect Wallet</button>
+            <button className="wallet-btn" onClick={handleConnect} disabled={connecting}>
+              {connecting ? 'Connecting...' : 'Connect Wallet'}
+            </button>
           )}
         </div>
       </header>
+
+      {/* Wallet Error Toast */}
+      {walletError && (
+        <div className="wallet-error-toast">
+          <AlertTriangle size={16} />
+          <span>{walletError}</span>
+          <button onClick={() => setWalletError(null)}><X size={14} /></button>
+        </div>
+      )}
 
       {/* Left Side Panel */}
       <aside className="left-views">
@@ -114,6 +187,7 @@ function App() {
               onClick={() => {
                 setActiveView(view.id);
                 if (view.id === 'judge') setJudgeMode(true);
+                else if (activeView === 'judge') setJudgeMode(false);
               }}
             >
               <Icon size={16} style={{ marginRight: '10px', flexShrink: 0 }} />
@@ -187,7 +261,13 @@ function App() {
       </footer>
 
       {/* Add Evidence Modal */}
-      {showAddEvidence && <AddEvidenceModal borrower={wallet!} onClose={() => setShowAddEvidence(false)} onSuccess={refreshGraph} />}
+      {showAddEvidence && wallet && (
+        <AddEvidenceModal
+          borrower={wallet}
+          onClose={() => setShowAddEvidence(false)}
+          onSuccess={refreshGraph}
+        />
+      )}
     </div>
   );
 }
@@ -198,6 +278,14 @@ function AddEvidenceModal({ borrower, onClose, onSuccess }: { borrower: string; 
   const [status, setStatus] = useState<'idle' | 'verifying' | 'polling' | 'done' | 'error'>('idle');
   const [requestId, setRequestId] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   const handleSubmit = async () => {
     setStatus('verifying');
@@ -207,16 +295,16 @@ function AddEvidenceModal({ borrower, onClose, onSuccess }: { borrower: string; 
       setStatus('polling');
 
       // Poll for confirmation
-      const poll = setInterval(async () => {
+      pollRef.current = setInterval(async () => {
         try {
           const statusRes = await api.checkVerification(res.requestId);
           if (statusRes.status === 'CONFIRMED') {
-            clearInterval(poll);
+            if (pollRef.current) clearInterval(pollRef.current);
             setStatus('done');
             setResult('Evidence verified and added to graph!');
             onSuccess();
           } else if (statusRes.status === 'REJECTED') {
-            clearInterval(poll);
+            if (pollRef.current) clearInterval(pollRef.current);
             setStatus('error');
             setResult('Verification was rejected.');
           }
@@ -224,7 +312,12 @@ function AddEvidenceModal({ borrower, onClose, onSuccess }: { borrower: string; 
       }, 1000);
 
       // Timeout after 15s
-      setTimeout(() => clearInterval(poll), 15000);
+      setTimeout(() => {
+        if (pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
+      }, 15000);
     } catch (err: any) {
       setStatus('error');
       setResult(err.message);
@@ -255,7 +348,7 @@ function AddEvidenceModal({ borrower, onClose, onSuccess }: { borrower: string; 
             <label>Transaction Hash</label>
             <input value={form.txHash} onChange={e => setForm({...form, txHash: e.target.value})} />
           </div>
-          
+
           {status === 'polling' && (
             <div className="verification-progress">
               <div className="loading-spinner" />
