@@ -17,3 +17,29 @@ assessmentRouter.post('/request', async (req: Request, res: Response) => {
         res.status(500).json({ error: e.message });
     }
 });
+
+// Preview Eligibility (runs Policy Engine without registering on-chain)
+assessmentRouter.post('/preview', async (req: Request, res: Response) => {
+    try {
+        const { borrower, nodeIds } = req.body;
+        if (!borrower || !Array.isArray(nodeIds)) {
+            return res.status(400).json({ error: "borrower and nodeIds[] required" });
+        }
+
+        const policyOutput = assessmentService.previewEligibility(borrower, nodeIds);
+        res.json({ success: true, policy: policyOutput });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Get Official Eligibility
+assessmentRouter.get('/eligibility/:address', async (req: Request, res: Response) => {
+    try {
+        const borrower = req.params.address;
+        const eligibility = await assessmentService.getEligibility(borrower);
+        res.json({ success: true, eligibility });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});

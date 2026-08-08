@@ -18,9 +18,10 @@ const DEPLOYER_PK = USE_REAL_NETWORK
 // Note: Ensure this matches the latest local deployment address when mocking
 const ELIGIBILITY_REGISTRY_ADDRESS = process.env.ELIGIBILITY_REGISTRY_ADDRESS || '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
 
-// Minimal ABI required for registration
+// Minimal ABI required for registration and reading
 const ELIGIBILITY_ABI = [
-    "function registerEligibility(address borrower, uint8 riskTier, uint256 maxActiveCredit, uint256 maxLtvBps, uint256 validUntil, uint256 policyVersion, bytes32 evidenceCommitment, bytes32 attestcoinContext) external"
+    "function registerEligibility(address borrower, uint8 riskTier, uint256 maxActiveCredit, uint256 maxLtvBps, uint256 validUntil, uint256 policyVersion, bytes32 evidenceCommitment, bytes32 attestcoinContext) external",
+    "function getEligibility(address borrower) external view returns (tuple(address borrower, uint8 riskTier, uint256 maxActiveCredit, uint256 maxLtvBps, uint256 validUntil, uint256 policyVersion, bytes32 evidenceCommitment, bytes32 attestcoinContext, uint256 nonce, bool active))"
 ];
 
 export class AssessmentService {
@@ -32,6 +33,27 @@ export class AssessmentService {
         this.provider = new ethers.JsonRpcProvider(RPC_URL);
         this.registrarWallet = new ethers.Wallet(DEPLOYER_PK, this.provider);
         this.registryContract = new ethers.Contract(ELIGIBILITY_REGISTRY_ADDRESS, ELIGIBILITY_ABI, this.registrarWallet);
+    }
+
+    /**
+     * Preview Assessment:
+     * Evaluates policy engine without freezing evidence or registering on-chain.
+     */
+    previewEligibility(borrower: string, nodeIds: string[]): PolicyOutput {
+        const frozenEvidence: CreditFeature[] = nodeIds.map(id => {
+            const node = graphStore.getNode(id);
+            if (!node || node.type !== 'EVIDENCE') throw new Error(`Invalid node ${id}`);
+            return node.data as CreditFeature;
+        });
+
+        // Use a dummy commitment for preview
+        const dummyCommitment = ethers.ZeroHash;
+
+        return policyEngine.evaluate({
+            borrower,
+            frozenEvidence,
+            evidenceCommitment: dummyCommitment
+        });
     }
 
     /**
@@ -87,6 +109,25 @@ export class AssessmentService {
         }
 
         return policyOutput;
+    }
+
+    /**
+     * Get Official Eligibility from on-chain registry
+     */
+    async getEligibility(borrower: string): Promise<any> {
+        const eligibility = await this.registryContract.getEligibility(borrower);
+        return {
+            borrower: eligibility.borrower,
+            riskTier: Number(eligibility.riskTier),
+            maxActiveCredit: eligibility.maxActiveCredit.toString(),
+            maxLtvBps: eligibility.maxLtvBps.toString(),
+            validUntil: eligibility.validUntil.toString(),
+            policyVersion: eligibility.policyVersion.toString(),
+            evidenceCommitment: eligibility.evidenceCommitment,
+            attestcoinContext: eligibility.attestcoinContext,
+            nonce: eligibility.nonce.toString(),
+            active: eligibility.active
+        };
     }
 }
 
