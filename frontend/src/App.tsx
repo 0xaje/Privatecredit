@@ -311,13 +311,15 @@ function AddEvidenceModal({ borrower, onClose, onSuccess }: { borrower: string; 
         } catch { /* keep polling */ }
       }, 1000);
 
-      // Timeout after 15s
+      // Timeout after 60s
       setTimeout(() => {
         if (pollRef.current) {
           clearInterval(pollRef.current);
           pollRef.current = null;
+          setStatus('error');
+          setResult('Verification timed out. The transaction might not be attested yet or the prover is taking too long.');
         }
-      }, 15000);
+      }, 60000);
     } catch (err: any) {
       setStatus('error');
       setResult(err.message);
