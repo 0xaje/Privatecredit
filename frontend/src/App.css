@@ -371,3 +371,56 @@
   padding: 12px; background: rgba(129,140,248,0.08); border-radius: 8px;
   margin-bottom: 12px; color: var(--accent-hover); font-size: 0.9rem;
 }
+
+/* ═══════════════ RESPONSIVE ═══════════════ */
+@media (max-width: 1024px) {
+  .app-container {
+    grid-template-rows: 64px auto 1fr auto 52px;
+    grid-template-columns: 1fr;
+    grid-template-areas: 
+      "nav"
+      "views"
+      "canvas"
+      "inspector"
+      "action";
+    height: auto;
+    min-height: 100vh;
+  }
+  
+  .left-views, .right-inspector {
+    border-right: none;
+    border-left: none;
+    border-bottom: 1px solid var(--panel-border);
+    max-height: 400px;
+  }
+  
+  .center-canvas {
+    min-height: 50vh;
+  }
+  
+  .top-nav {
+    padding: 0 16px;
+  }
+  
+  .bottom-action-bar {
+    padding: 0 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+    height: auto;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .logo {
+    font-size: 1rem;
+  }
+  .nav-item {
+    display: none;
+  }
+  .status-indicators {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
