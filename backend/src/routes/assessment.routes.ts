@@ -36,7 +36,7 @@ assessmentRouter.post('/preview', async (req: Request, res: Response) => {
 // Get Official Eligibility
 assessmentRouter.get('/eligibility/:address', async (req: Request, res: Response) => {
     try {
-        const borrower = req.params.address;
+        const borrower = req.params.address as string;
         const eligibility = await assessmentService.getEligibility(borrower);
         res.json({ success: true, eligibility });
     } catch (e: any) {

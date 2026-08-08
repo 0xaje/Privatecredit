@@ -131,7 +131,7 @@ loansRouter.post('/repay', async (req: Request, res: Response) => {
 
 loansRouter.get('/total-owed/:loanId', async (req: Request, res: Response) => {
     try {
-        const loanId = parseInt(req.params.loanId);
+        const loanId = parseInt(req.params.loanId as string);
         const contract = new ethers.Contract(VAULT_ADDR, VAULT_ABI, provider);
         const totalOwed = await contract.calculateTotalOwed(loanId);
         res.json({ loanId, totalOwed: totalOwed.toString() });
@@ -142,7 +142,7 @@ loansRouter.get('/total-owed/:loanId', async (req: Request, res: Response) => {
 
 loansRouter.get('/capacity/:address', async (req: Request, res: Response) => {
     try {
-        const borrower = req.params.address;
+        const borrower = req.params.address as string;
         const contract = new ethers.Contract(CAPACITY_MANAGER_ADDR, CAPACITY_MANAGER_ABI, provider);
         
         const [available, used] = await Promise.all([
@@ -162,7 +162,7 @@ loansRouter.get('/capacity/:address', async (req: Request, res: Response) => {
 
 loansRouter.get('/:loanId', async (req: Request, res: Response) => {
     try {
-        const loanId = parseInt(req.params.loanId);
+        const loanId = parseInt(req.params.loanId as string);
         const contract = new ethers.Contract(VAULT_ADDR, VAULT_ABI, provider);
         const loan = await contract.getLoan(loanId);
         

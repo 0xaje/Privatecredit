@@ -1,9 +1,6 @@
 import { randomBytes } from 'crypto';
 import { ethers } from 'ethers';
-// @ts-ignore
-import { proofProvider } from '@gluwa/usc-sdk';
-
-const { ProofBuilder } = proofProvider.service;
+import { proofProvider, blockProver } from '@gluwa/usc-sdk';
 
 export type VerificationStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'EXPIRED';
 
@@ -21,7 +18,6 @@ export interface VerificationRequest {
 export class AttestcoinService {
     private requests: Map<string, VerificationRequest> = new Map();
     private provider: ethers.JsonRpcProvider;
-    private proofBuilder: any;
     private useRealAttestcoin: boolean;
 
     constructor() {
@@ -31,9 +27,6 @@ export class AttestcoinService {
         this.provider = new ethers.JsonRpcProvider(RPC_URL);
 
         if (this.useRealAttestcoin) {
-            const PROVER_URL = process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://prover.cc3-testnet.creditcoin.network/';
-            // @ts-ignore
-            this.proofBuilder = new ProofBuilder(PROVER_URL);
             console.log("AttestcoinService initialized in LIVE mode (USC SDK)");
         } else {
             console.log("AttestcoinService initialized in MOCK mode");
@@ -129,7 +122,33 @@ export class AttestcoinService {
 
         try {
             console.log(`[Attestcoin] Requesting proof for ${txHash} on chain ${sourceChainId}...`);
-            await new Promise(r => setTimeout(r, 2000));
+            const chainKey = parseInt(sourceChainId, 10) || 1;
+            const PROVER_URL = process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://prover.cc3-testnet.creditcoin.network/';
+            
+            // Build the proof
+            const apiProvider = new proofProvider.service.ProofBuilder(chainKey, PROVER_URL);
+            const proofResult = await apiProvider.getProof(txHash);
+
+            if (!proofResult.success || !proofResult.data) {
+                throw new Error(`Proof generation failed: ${proofResult.error}`);
+            }
+
+            const proofData = proofResult.data;
+
+            // Verify on-chain
+            const prover = new blockProver.PrecompileBlockProver(this.provider);
+            const verificationResult = await prover.verifySingle(
+                proofData.chainKey,
+                proofData.headerNumber,
+                proofData.txBytes,
+                proofData.merkleProof,
+                proofData.continuityProof,
+            );
+
+            if (!verificationResult) {
+                throw new Error("On-chain verification failed via 0x0FD2 precompile");
+            }
+
             console.log(`[Attestcoin] Proof verified successfully via 0x0FD2 precompile.`);
 
             req.status = 'CONFIRMED';
