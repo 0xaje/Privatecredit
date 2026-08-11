@@ -28,37 +28,49 @@ contract EligibilityRegistry is Ownable, Pausable, IEligibilityRegistry {
     }
 
     /**
-     * @notice Registers a new eligibility for a borrower
-     * @param borrower The borrower address
-     * @param riskTier The risk tier assigned
-     * @param maxActiveCredit The max credit available
-     * @param maxLtvBps The max LTV in basis points
-     * @param validUntil The validity expiration timestamp
-     * @param policyVersion The policy version
-     * @param evidenceCommitment The evidence commitment
-     * @param attestcoinContext The attestcoin context
+     * @notice Registers a new eligibility for a borrower. Verifies Attestcoin Proof on-chain.
+     * @param params The eligibility parameters assigned by the registrar
+     * @param v ECDSA signature v
+     * @param r ECDSA signature r
+     * @param s ECDSA signature s
+     * @param proof The Attestcoin proof data
      */
     function registerEligibility(
-        address borrower,
-        RiskTier riskTier,
-        uint256 maxActiveCredit,
-        uint256 maxLtvBps,
-        uint256 validUntil,
-        uint256 policyVersion,
-        bytes32 evidenceCommitment,
-        bytes32 attestcoinContext
-    ) external onlyRegistrar whenNotPaused {
+        EligibilityParams calldata params,
+        uint8 v, bytes32 r, bytes32 s,
+        AttestcoinProof calldata proof
+    ) external whenNotPaused {
+        address borrower = msg.sender;
+        
+        // 1. Verify Registrar Signature
+        bytes32 messageHash = keccak256(abi.encodePacked(
+            borrower, params.riskTier, params.maxActiveCredit, params.maxLtvBps, params.validUntil, params.policyVersion, params.evidenceCommitment
+        ));
+        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
+        address signer = ecrecover(ethSignedMessageHash, v, r, s);
+        if (signer != registrar) revert UnauthorizedRegistrar();
+
+        // 2. Verify Attestcoin Proof On-Chain via Precompile (if provided)
+        if (proof.txBytes.length > 0) {
+            (bool success, bytes memory result) = address(0x0FD2).staticcall(
+                abi.encode(proof.chainKey, proof.headerNumber, proof.txBytes, proof.merkleProof, proof.continuityProof)
+            );
+            require(success, "Attestcoin on-chain precompile verification failed");
+            bool isProofValid = abi.decode(result, (bool));
+            require(isProofValid, "Attestcoin proof is invalid");
+        }
+
         uint256 nonce = ++nonces[borrower];
         
         eligibilities[borrower] = Eligibility({
             borrower: borrower,
-            riskTier: riskTier,
-            maxActiveCredit: maxActiveCredit,
-            maxLtvBps: maxLtvBps,
-            validUntil: validUntil,
-            policyVersion: policyVersion,
-            evidenceCommitment: evidenceCommitment,
-            attestcoinContext: attestcoinContext,
+            riskTier: params.riskTier,
+            maxActiveCredit: params.maxActiveCredit,
+            maxLtvBps: params.maxLtvBps,
+            validUntil: params.validUntil,
+            policyVersion: params.policyVersion,
+            evidenceCommitment: params.evidenceCommitment,
+            attestcoinContext: keccak256(proof.txBytes),
             nonce: nonce,
             active: true
         });

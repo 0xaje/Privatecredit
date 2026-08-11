@@ -11,8 +11,8 @@ assessmentRouter.post('/request', async (req: Request, res: Response) => {
             return res.status(400).json({ error: "borrower and nodeIds[] required" });
         }
 
-        const policyOutput = await assessmentService.requestEligibility(borrower, nodeIds);
-        res.json({ success: true, policy: policyOutput });
+        const { policyOutput, registrationData } = await assessmentService.requestEligibility(borrower, nodeIds);
+        res.json({ success: true, policy: policyOutput, registrationData });
     } catch (e: any) {
         res.status(500).json({ error: e.message });
     }

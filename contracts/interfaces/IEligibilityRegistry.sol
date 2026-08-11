@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Eligibility, RiskTier} from "../libraries/CreditTypes.sol";
+import {Eligibility, RiskTier, EligibilityParams, AttestcoinProof} from "../libraries/CreditTypes.sol";
 
 interface IEligibilityRegistry {
     event EligibilityRegistered(address indexed borrower, uint256 nonce);
@@ -15,23 +15,16 @@ interface IEligibilityRegistry {
 
     /**
      * @notice Registers a new eligibility for a borrower
-     * @param borrower The borrower address
-     * @param riskTier The risk tier assigned
-     * @param maxActiveCredit The max credit available
-     * @param maxLtvBps The max LTV in basis points
-     * @param policyVersion The policy version
-     * @param evidenceCommitment The evidence commitment
-     * @param attestcoinContext The attestcoin context
+     * @param params The eligibility parameters
+     * @param v ECDSA signature v
+     * @param r ECDSA signature r
+     * @param s ECDSA signature s
+     * @param proof The Attestcoin proof data
      */
     function registerEligibility(
-        address borrower,
-        RiskTier riskTier,
-        uint256 maxActiveCredit,
-        uint256 maxLtvBps,
-        uint256 validUntil,
-        uint256 policyVersion,
-        bytes32 evidenceCommitment,
-        bytes32 attestcoinContext
+        EligibilityParams calldata params,
+        uint8 v, bytes32 r, bytes32 s,
+        AttestcoinProof calldata proof
     ) external;
 
     /**

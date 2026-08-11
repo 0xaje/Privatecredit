@@ -11,21 +11,10 @@ contract CapacityManager is Ownable, ICapacityManager {
     IEligibilityRegistry public eligibilityRegistry;
     mapping(address => bool) public authorizedCallers;
 
-
-
-    /**
-     * @notice Constructor for CapacityManager
-     * @param _eligibilityRegistry Address of EligibilityRegistry
-     */
     constructor(address _eligibilityRegistry) Ownable(msg.sender) {
         eligibilityRegistry = IEligibilityRegistry(_eligibilityRegistry);
     }
 
-    /**
-     * @notice Set authorized caller status
-     * @param caller The caller address
-     * @param authorized True if authorized
-     */
     function setAuthorizedCaller(address caller, bool authorized) external onlyOwner {
         authorizedCallers[caller] = authorized;
     }
@@ -37,8 +26,6 @@ contract CapacityManager is Ownable, ICapacityManager {
 
     /**
      * @notice Reserves capacity for a borrower
-     * @param borrower The borrower address
-     * @param amount The amount to reserve
      */
     function reserveCapacity(address borrower, uint256 amount) external onlyAuthorized {
         if (!eligibilityRegistry.isEligibilityValid(borrower)) revert InvalidEligibility();
@@ -52,8 +39,6 @@ contract CapacityManager is Ownable, ICapacityManager {
 
     /**
      * @notice Releases previously reserved capacity
-     * @param borrower The borrower address
-     * @param amount The amount to release
      */
     function releaseCapacity(address borrower, uint256 amount) external onlyAuthorized {
         if (_usedCapacity[borrower] < amount) {
@@ -66,8 +51,6 @@ contract CapacityManager is Ownable, ICapacityManager {
 
     /**
      * @notice Calculates the available capacity for a borrower
-     * @param borrower The borrower address
-     * @return The available capacity
      */
     function availableCapacity(address borrower) public view returns (uint256) {
         if (!eligibilityRegistry.isEligibilityValid(borrower)) return 0;
@@ -81,8 +64,6 @@ contract CapacityManager is Ownable, ICapacityManager {
 
     /**
      * @notice Gets the total used capacity for a borrower
-     * @param borrower The borrower address
-     * @return The used capacity
      */
     function getUsedCapacity(address borrower) external view returns (uint256) {
         return _usedCapacity[borrower];
@@ -90,9 +71,6 @@ contract CapacityManager is Ownable, ICapacityManager {
 
     /**
      * @notice Checks if a borrower can borrow a specific amount
-     * @param borrower The borrower address
-     * @param amount The amount to check
-     * @return True if can borrow, false otherwise
      */
     function canBorrow(address borrower, uint256 amount) external view returns (bool) {
         return availableCapacity(borrower) >= amount;

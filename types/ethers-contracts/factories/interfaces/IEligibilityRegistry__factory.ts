@@ -213,44 +213,88 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "borrower",
-        "type": "address"
+        "components": [
+          {
+            "internalType": "enum RiskTier",
+            "name": "riskTier",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxActiveCredit",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxLtvBps",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "validUntil",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "policyVersion",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "evidenceCommitment",
+            "type": "bytes32"
+          }
+        ],
+        "internalType": "struct EligibilityParams",
+        "name": "params",
+        "type": "tuple"
       },
       {
-        "internalType": "enum RiskTier",
-        "name": "riskTier",
+        "internalType": "uint8",
+        "name": "v",
         "type": "uint8"
       },
       {
-        "internalType": "uint256",
-        "name": "maxActiveCredit",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "maxLtvBps",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "validUntil",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "policyVersion",
-        "type": "uint256"
-      },
-      {
         "internalType": "bytes32",
-        "name": "evidenceCommitment",
+        "name": "r",
         "type": "bytes32"
       },
       {
         "internalType": "bytes32",
-        "name": "attestcoinContext",
+        "name": "s",
         "type": "bytes32"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint64",
+            "name": "chainKey",
+            "type": "uint64"
+          },
+          {
+            "internalType": "uint64",
+            "name": "headerNumber",
+            "type": "uint64"
+          },
+          {
+            "internalType": "bytes",
+            "name": "txBytes",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "merkleProof",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "continuityProof",
+            "type": "bytes"
+          }
+        ],
+        "internalType": "struct AttestcoinProof",
+        "name": "proof",
+        "type": "tuple"
       }
     ],
     "name": "registerEligibility",

@@ -62,7 +62,7 @@ export class AssessmentService {
      * 2. Run Policy Engine
      * 3. Register on-chain
      */
-    async requestEligibility(borrower: string, nodeIds: string[]): Promise<PolicyOutput> {
+    async requestEligibility(borrower: string, nodeIds: string[]): Promise<any> {
         // 1. Freeze Evidence (throws if unverified nodes are passed)
         const commitment = snapshotService.freezeEvidenceSet(borrower, nodeIds);
 
@@ -82,33 +82,59 @@ export class AssessmentService {
 
         // If rejected, don't register on chain
         if (policyOutput.riskTier === 'REJECTED') {
-            return policyOutput;
+            return { policyOutput };
         }
 
-        // 3. Register On-Chain
         const riskTierEnum = riskTierToEnum(policyOutput.riskTier);
         
-        console.log(`Registering eligibility on-chain for ${borrower}...`);
+        // 1. Get Attestcoin Proof Data from the mock/real attestcoin service
+        let proof = {
+            chainKey: 0,
+            headerNumber: 0,
+            txBytes: "0x",
+            merkleProof: "0x",
+            continuityProof: "0x"
+        };
         
-        try {
-            const tx = await this.registryContract.registerEligibility(
-                borrower,
-                riskTierEnum,
-                policyOutput.maxActiveCredit,
-                policyOutput.maxLtvBps,
-                policyOutput.validUntil,
-                policyOutput.policyVersion,
-                commitment,
-                attestcoinService.computeEvidenceContext(borrower) // real cross-chain evidence commitment
-            );
-            await tx.wait();
-            console.log(`Registered! TxHash: ${tx.hash}`);
-        } catch (e: any) {
-            console.error("On-chain registration failed:", e);
-            throw new Error(`Blockchain transaction failed: ${e.message}`);
+        // Try to find a real proof from the evidence nodes
+        for (const feature of frozenEvidence) {
+            if (feature.attestcoinRef) {
+                const realProof = attestcoinService.getVerificationProof(feature.attestcoinRef);
+                if (realProof) {
+                    proof = realProof;
+                    break; // use the first valid real proof we find
+                }
+            }
         }
 
-        return policyOutput;
+        // 2. Generate EIP-191 Signature
+        const messageHash = ethers.keccak256(
+            ethers.solidityPacked(
+                ['address', 'uint8', 'uint256', 'uint256', 'uint256', 'uint256', 'bytes32'],
+                [borrower, riskTierEnum, policyOutput.maxActiveCredit, policyOutput.maxLtvBps, policyOutput.validUntil, policyOutput.policyVersion, commitment]
+            )
+        );
+
+        const signature = await this.registrarWallet.signMessage(ethers.getBytes(messageHash));
+        const sig = ethers.Signature.from(signature);
+
+        return {
+            policyOutput,
+            registrationData: {
+                params: {
+                    riskTier: riskTierEnum,
+                    maxActiveCredit: policyOutput.maxActiveCredit,
+                    maxLtvBps: policyOutput.maxLtvBps,
+                    validUntil: policyOutput.validUntil,
+                    policyVersion: policyOutput.policyVersion,
+                    evidenceCommitment: commitment
+                },
+                v: sig.v,
+                r: sig.r,
+                s: sig.s,
+                proof
+            }
+        };
     }
 
     /**

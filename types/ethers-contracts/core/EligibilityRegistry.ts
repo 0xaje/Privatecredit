@@ -9,6 +9,16 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
     export type EligibilityStructOutput = [borrower: string, riskTier: bigint, maxActiveCredit: bigint, maxLtvBps: bigint, validUntil: bigint, policyVersion: bigint, evidenceCommitment: string, attestcoinContext: string, nonce: bigint, active: boolean] & {borrower: string, riskTier: bigint, maxActiveCredit: bigint, maxLtvBps: bigint, validUntil: bigint, policyVersion: bigint, evidenceCommitment: string, attestcoinContext: string, nonce: bigint, active: boolean }
   
 
+    export type EligibilityParamsStruct = {riskTier: BigNumberish, maxActiveCredit: BigNumberish, maxLtvBps: BigNumberish, validUntil: BigNumberish, policyVersion: BigNumberish, evidenceCommitment: BytesLike}
+
+    export type EligibilityParamsStructOutput = [riskTier: bigint, maxActiveCredit: bigint, maxLtvBps: bigint, validUntil: bigint, policyVersion: bigint, evidenceCommitment: string] & {riskTier: bigint, maxActiveCredit: bigint, maxLtvBps: bigint, validUntil: bigint, policyVersion: bigint, evidenceCommitment: string }
+  
+
+    export type AttestcoinProofStruct = {chainKey: BigNumberish, headerNumber: BigNumberish, txBytes: BytesLike, merkleProof: BytesLike, continuityProof: BytesLike}
+
+    export type AttestcoinProofStructOutput = [chainKey: bigint, headerNumber: bigint, txBytes: string, merkleProof: string, continuityProof: string] & {chainKey: bigint, headerNumber: bigint, txBytes: string, merkleProof: string, continuityProof: string }
+  
+
   export interface EligibilityRegistryInterface extends Interface {
     getFunction(nameOrSignature: "eligibilities" | "getEligibility" | "getEligibilityNonce" | "isEligibilityValid" | "nonces" | "owner" | "paused" | "registerEligibility" | "registrar" | "renounceOwnership" | "revokeEligibility" | "setRegistrar" | "transferOwnership"): FunctionFragment;
 
@@ -21,7 +31,7 @@ encodeFunctionData(functionFragment: 'isEligibilityValid', values: [AddressLike]
 encodeFunctionData(functionFragment: 'nonces', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'paused', values?: undefined): string;
-encodeFunctionData(functionFragment: 'registerEligibility', values: [AddressLike, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BytesLike, BytesLike]): string;
+encodeFunctionData(functionFragment: 'registerEligibility', values: [EligibilityParamsStruct, BigNumberish, BytesLike, BytesLike, AttestcoinProofStruct]): string;
 encodeFunctionData(functionFragment: 'registrar', values?: undefined): string;
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
 encodeFunctionData(functionFragment: 'revokeEligibility', values: [AddressLike]): string;
@@ -207,7 +217,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 
     
     registerEligibility: TypedContractMethod<
-      [borrower: AddressLike, riskTier: BigNumberish, maxActiveCredit: BigNumberish, maxLtvBps: BigNumberish, validUntil: BigNumberish, policyVersion: BigNumberish, evidenceCommitment: BytesLike, attestcoinContext: BytesLike, ],
+      [params: EligibilityParamsStruct, v: BigNumberish, r: BytesLike, s: BytesLike, proof: AttestcoinProofStruct, ],
       [void],
       'nonpayable'
     >
@@ -292,7 +302,7 @@ getFunction(nameOrSignature: 'paused'): TypedContractMethod<
       'view'
     >;
 getFunction(nameOrSignature: 'registerEligibility'): TypedContractMethod<
-      [borrower: AddressLike, riskTier: BigNumberish, maxActiveCredit: BigNumberish, maxLtvBps: BigNumberish, validUntil: BigNumberish, policyVersion: BigNumberish, evidenceCommitment: BytesLike, attestcoinContext: BytesLike, ],
+      [params: EligibilityParamsStruct, v: BigNumberish, r: BytesLike, s: BytesLike, proof: AttestcoinProofStruct, ],
       [void],
       'nonpayable'
     >;

@@ -14,21 +14,10 @@ contract RepaymentRegistry is Ownable, IRepaymentRegistry {
 
     constructor() Ownable(msg.sender) {}
 
-    /**
-     * @notice Sets the authorized recorder address
-     * @param _recorder The authorized recorder address
-     */
     function setAuthorizedRecorder(address _recorder) external onlyOwner {
         authorizedRecorder = _recorder;
     }
 
-    /**
-     * @notice Records a repayment outcome
-     * @param loanId The ID of the loan
-     * @param borrower The borrower address
-     * @param amount The repayment amount
-     * @param outcome The outcome of the repayment
-     */
     function recordRepayment(
         uint256 loanId,
         address borrower,
@@ -50,29 +39,14 @@ contract RepaymentRegistry is Ownable, IRepaymentRegistry {
         emit RepaymentRecorded(loanId, borrower, amount, outcome);
     }
 
-    /**
-     * @notice Retrieves a specific repayment record
-     * @param loanId The ID of the loan
-     * @return The repayment record
-     */
     function getRepayment(uint256 loanId) external view returns (RepaymentRecord memory) {
         return records[loanId];
     }
 
-    /**
-     * @notice Retrieves all repayment loan IDs for a borrower
-     * @param borrower The borrower address
-     * @return Array of loan IDs
-     */
     function getBorrowerRepayments(address borrower) external view returns (uint256[] memory) {
         return borrowerRepayments[borrower];
     }
 
-    /**
-     * @notice Gets the total number of repayments for a borrower
-     * @param borrower The borrower address
-     * @return The count of repayments
-     */
     function getBorrowerRepaymentCount(address borrower) external view returns (uint256) {
         return borrowerRepayments[borrower].length;
     }

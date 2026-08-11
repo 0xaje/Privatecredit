@@ -13,6 +13,7 @@ export interface VerificationRequest {
     status: VerificationStatus;
     timestamp: number;
     mockResult?: any;
+    proofData?: any;
 }
 
 export class AttestcoinService {
@@ -72,6 +73,12 @@ export class AttestcoinService {
         if (!req) throw new Error("Request not found");
         if (req.status !== 'CONFIRMED') throw new Error("Verification not confirmed");
         return req.mockResult;
+    }
+
+    getVerificationProof(requestId: string): any {
+        const req = this.requests.get(requestId);
+        if (!req || req.status !== 'CONFIRMED') return null;
+        return req.proofData;
     }
 
     /**
@@ -152,6 +159,7 @@ export class AttestcoinService {
             console.log(`[Attestcoin] Proof verified successfully via 0x0FD2 precompile.`);
 
             req.status = 'CONFIRMED';
+            req.proofData = proofData;
             
             if (req.eventType === 'INFLOW') {
                 req.mockResult = {

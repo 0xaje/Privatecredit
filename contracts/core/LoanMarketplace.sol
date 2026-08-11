@@ -9,7 +9,6 @@ import "../interfaces/ILoanMarketplace.sol";
 import "../interfaces/IEligibilityRegistry.sol";
 import "../interfaces/ICapacityManager.sol";
 import "../interfaces/ILoanVault.sol";
-import "../libraries/PolicyConstants.sol";
 
 contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace {
     mapping(uint256 => BorrowRequest) public requests;
@@ -26,14 +25,7 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
     error TermsOutOfBounds();
     error TransferFailed();
     error NotBorrower();
-    error InsufficientCollateral(uint256 required, uint256 provided);
 
-    /**
-     * @notice Constructor for LoanMarketplace
-     * @param _eligibilityRegistry Address of EligibilityRegistry
-     * @param _capacityManager Address of CapacityManager
-     * @param _loanVault Address of LoanVault
-     */
     constructor(
         address _eligibilityRegistry,
         address _capacityManager,
@@ -44,22 +36,10 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
         loanVault = ILoanVault(_loanVault);
     }
 
-    /**
-     * @notice Set Loan Vault address
-     * @param _loanVault The loan vault address
-     */
     function setLoanVault(address _loanVault) external onlyOwner {
         loanVault = ILoanVault(_loanVault);
     }
 
-    /**
-     * @notice Creates a new borrow request
-     * @param amount The loan amount requested
-     * @param maxAprBps The maximum APR the borrower is willing to accept
-     * @param maxDuration The maximum duration of the loan
-     * @param collateralAmount The collateral amount offered
-     * @return requestId The ID of the created request
-     */
     function createBorrowRequest(
         uint256 amount,
         uint256 maxAprBps,
@@ -85,10 +65,6 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
         return requestId;
     }
 
-    /**
-     * @notice Cancels an open borrow request
-     * @param requestId The ID of the request to cancel
-     */
     function cancelBorrowRequest(uint256 requestId) external {
         BorrowRequest storage req = requests[requestId];
         if (req.borrower != msg.sender) revert NotRequestOwner(msg.sender, requestId);
@@ -98,14 +74,6 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
         emit RequestCancelled(requestId);
     }
 
-    /**
-     * @notice Creates an offer for a specific borrow request
-     * @param requestId The ID of the borrow request
-     * @param aprBps The offered APR in basis points
-     * @param duration The loan duration offered
-     * @param requiredCollateral The required collateral amount
-     * @return offerId The ID of the created offer
-     */
     function createLenderOffer(
         uint256 requestId,
         uint256 aprBps,
@@ -134,10 +102,6 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
         return offerId;
     }
 
-    /**
-     * @notice Withdraws a pending offer
-     * @param offerId The ID of the offer to withdraw
-     */
     function withdrawOffer(uint256 offerId) external nonReentrant {
         LenderOffer storage offer = offers[offerId];
         if (offer.lender != msg.sender) revert NotOfferOwner(msg.sender, offerId);
@@ -153,10 +117,6 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
         emit OfferWithdrawn(offerId);
     }
 
-    /**
-     * @notice Accepts a lender offer for a borrow request
-     * @param offerId The ID of the offer to accept
-     */
     function acceptOffer(uint256 offerId) external payable nonReentrant whenNotPaused {
         LenderOffer storage offer = offers[offerId];
         BorrowRequest storage req = requests[offer.requestId];
@@ -166,20 +126,14 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
         if (offer.status != OfferStatus.PENDING) revert OfferNotPending(offerId);
         if (msg.value != offer.requiredCollateral) revert TermsOutOfBounds();
 
-        // Enforce LTV from the borrower's eligibility record
-        uint256 principal = offerDeposits[offerId];
-        Eligibility memory elig = eligibilityRegistry.getEligibility(req.borrower);
-        if (elig.maxLtvBps > 0) {
-            uint256 requiredCollateral = (principal * elig.maxLtvBps) / PolicyConstants.BPS_DENOMINATOR;
-            if (msg.value < requiredCollateral) revert InsufficientCollateral(requiredCollateral, msg.value);
-        }
-
         req.status = RequestStatus.FUNDED;
         offer.status = OfferStatus.ACCEPTED;
+
+        uint256 principal = offerDeposits[offerId];
         offerDeposits[offerId] = 0;
         
         uint256 totalToSend = principal + msg.value;
-        loanVault.originateLoan{value: totalToSend}(
+        uint256 loanId = loanVault.originateLoan{value: totalToSend}(
             req.borrower,
             offer.lender,
             principal,
@@ -191,28 +145,14 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
         emit OfferAccepted(offerId, offer.requestId);
     }
 
-    /**
-     * @notice Gets the details of a borrow request
-     * @param requestId The ID of the borrow request
-     * @return The BorrowRequest struct
-     */
     function getBorrowRequest(uint256 requestId) external view returns (BorrowRequest memory) {
         return requests[requestId];
     }
 
-    /**
-     * @notice Gets the details of a lender offer
-     * @param offerId The ID of the offer
-     * @return The LenderOffer struct
-     */
     function getLenderOffer(uint256 offerId) external view returns (LenderOffer memory) {
         return offers[offerId];
     }
     
-    /**
-     * @notice Retrieves a list of open borrow requests
-     * @return An array of BorrowRequest structs
-     */
     function getOpenRequests() external view returns (BorrowRequest[] memory) {
         uint256 count = 0;
         for (uint256 i = 1; i < nextRequestId; i++) {
