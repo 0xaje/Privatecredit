@@ -35,6 +35,13 @@ export class AttestcoinService {
     }
 
     async createVerificationRequest(chainId: string, eventType: string, txHash: string, borrower: string): Promise<string> {
+        // Prevent duplicate txHash submissions (Double-Spend attack on reputation)
+        for (const req of this.requests.values()) {
+            if (req.txHash.toLowerCase() === txHash.toLowerCase()) {
+                throw new Error("Transaction hash already submitted for verification");
+            }
+        }
+
         const requestId = 'req_' + randomBytes(16).toString('hex');
         
         const request: VerificationRequest = {
