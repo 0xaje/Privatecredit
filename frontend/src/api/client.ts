@@ -71,33 +71,33 @@ export const api = {
   createBorrowRequest: async (amount: string, maxAprBps: number, maxDuration: number, collateralAmount: string) => {
     const signer = await getSigner();
     const contract = new ethers.Contract(ADDRESSES.loanMarketplace, LoanMarketplaceABI.abi, signer);
-    const tx = await contract.createBorrowRequest(amount, maxAprBps, maxDuration, collateralAmount, { value: collateralAmount });
-    await tx.wait();
-    return { success: true };
+    const tx = await contract.createBorrowRequest(amount, maxAprBps, maxDuration, collateralAmount);
+    const receipt = await tx.wait();
+    return { success: true, txHash: receipt?.hash };
   },
 
   createOffer: async (requestId: number, aprBps: number, duration: number, requiredCollateral: string, principal: string) => {
     const signer = await getSigner();
     const contract = new ethers.Contract(ADDRESSES.loanMarketplace, LoanMarketplaceABI.abi, signer);
     const tx = await contract.createLenderOffer(requestId, aprBps, duration, requiredCollateral, { value: principal });
-    await tx.wait();
-    return { success: true };
+    const receipt = await tx.wait();
+    return { success: true, txHash: receipt?.hash };
   },
 
   acceptOffer: async (offerId: number, collateralAmount: string) => {
     const signer = await getSigner();
     const contract = new ethers.Contract(ADDRESSES.loanMarketplace, LoanMarketplaceABI.abi, signer);
     const tx = await contract.acceptOffer(offerId, { value: collateralAmount });
-    await tx.wait();
-    return { success: true };
+    const receipt = await tx.wait();
+    return { success: true, txHash: receipt?.hash };
   },
 
   repayLoan: async (loanId: number, repaymentAmount: string) => {
     const signer = await getSigner();
     const contract = new ethers.Contract(ADDRESSES.loanVault, LoanVaultABI.abi, signer);
-    const tx = await contract.repayLoan(loanId, repaymentAmount, { value: repaymentAmount });
-    await tx.wait();
-    return { success: true };
+    const tx = await contract.repayLoan(loanId, { value: repaymentAmount });
+    const receipt = await tx.wait();
+    return { success: true, txHash: receipt?.hash };
   },
 
   getCapacity: (address: string) =>
@@ -113,7 +113,18 @@ export const api = {
   getJudgeView: (borrower: string) =>
     fetchJSON(`/judge/${borrower}`),
 
-  // Artefacts (Still off-chain simulation for UI purposes or could be moved)
-  commitArtefact: (snapshotCommitment: string, eligibilityNonce: number, contentReference: string) =>
-    fetchJSON('/artefacts/commit', { method: 'POST', body: JSON.stringify({ snapshotCommitment, eligibilityNonce, contentReference }) }),
+  // Artefacts (On-Chain)
+  commitArtefact: async (snapshotCommitment: string, eligibilityNonce: number, contentReference: string) => {
+    const signer = await getSigner();
+    // Assuming ArtefactRegistry ABI is available or we use a minimal ABI inline
+    const minimalAbi = [
+      "function commitArtefact(bytes32 snapshotCommitment, uint256 eligibilityNonce, bytes32 policyReference, string calldata contentReference) external"
+    ];
+    const contract = new ethers.Contract("0x39a7ff6ba01dC15142d458130C277973E203e8CB", minimalAbi, signer);
+    
+    // We pass ethers.ZeroHash for policyReference mock just like backend did
+    const tx = await contract.commitArtefact(snapshotCommitment, eligibilityNonce || 1, ethers.ZeroHash, contentReference || "");
+    const receipt = await tx.wait();
+    return { success: true, txHash: receipt?.hash };
+  },
 };

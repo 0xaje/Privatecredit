@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { attestcoinService } from '../services/AttestcoinService';
 import { evidenceNormalizer } from '../services/EvidenceNormalizer';
+import { graphStore } from '../services/GraphStore';
 
 export const attestcoinRouter = Router();
 
@@ -28,23 +29,25 @@ attestcoinRouter.get('/status/:requestId', (req: Request, res: Response) => {
         if (status === 'CONFIRMED') {
             const rawResult = attestcoinService.getVerificationResult(requestId);
             
-            // In a real app, you'd fetch the original request details from DB to know the borrower/type
-            // For MVP, we'll extract them from the mockResult if possible, or use placeholders.
-            const borrower = rawResult.receiver || '0xMockBorrower';
-            const chainId = '1';
-            const eventType = rawResult.loanId ? 'REPAYMENT' : 'INFLOW';
-            const txHash = '0xmocktxhash';
+            const reqInfo = attestcoinService.getRequest(requestId);
+            const borrower = reqInfo.borrower;
+            const chainId = reqInfo.chainId;
+            const eventType = reqInfo.eventType;
+            const txHash = reqInfo.txHash;
 
-            const feature = evidenceNormalizer.normalizeAndStore(
-                borrower,
-                requestId,
-                chainId,
-                eventType,
-                txHash,
-                rawResult
-            );
+            const evidenceNodeId = `evidence_feat_${requestId}`;
+            if (!graphStore.getNode(evidenceNodeId)) {
+                evidenceNormalizer.normalizeAndStore(
+                    borrower,
+                    requestId,
+                    chainId,
+                    eventType,
+                    txHash,
+                    rawResult
+                );
+            }
 
-            return res.json({ status, feature });
+            return res.json({ status, borrower, chainId, eventType, txHash });
         }
         
         res.json({ status });

@@ -86,7 +86,7 @@ async function main() {
     };
 
     fs.writeFileSync(
-        path.join(__dirname, "../deployed-addresses.json"),
+        path.join(process.cwd(), "deployed-addresses.json"),
         JSON.stringify(addresses, null, 2)
     );
     console.log("Deployment complete! Addresses saved to deployed-addresses.json");

@@ -43,8 +43,11 @@ contract EligibilityRegistry is Ownable, Pausable, IEligibilityRegistry {
         address borrower = msg.sender;
         
         // 1. Verify Registrar Signature
+        require(registrar != address(0), "Registrar not set");
+        
+        uint256 nonce = nonces[borrower] + 1;
         bytes32 messageHash = keccak256(abi.encodePacked(
-            borrower, params.riskTier, params.maxActiveCredit, params.maxLtvBps, params.validUntil, params.policyVersion, params.evidenceCommitment
+            borrower, params.riskTier, params.maxActiveCredit, params.maxLtvBps, params.validUntil, params.policyVersion, params.evidenceCommitment, nonce, block.chainid, address(this)
         ));
         bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
         address signer = ecrecover(ethSignedMessageHash, v, r, s);
@@ -60,7 +63,7 @@ contract EligibilityRegistry is Ownable, Pausable, IEligibilityRegistry {
             require(isProofValid, "Attestcoin proof is invalid");
         }
 
-        uint256 nonce = ++nonces[borrower];
+        nonces[borrower] = nonce;
         
         eligibilities[borrower] = Eligibility({
             borrower: borrower,

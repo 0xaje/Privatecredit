@@ -68,6 +68,12 @@ export class AttestcoinService {
         return req.status;
     }
 
+    getRequest(requestId: string): VerificationRequest {
+        const req = this.requests.get(requestId);
+        if (!req) throw new Error("Request not found");
+        return req;
+    }
+
     getVerificationResult(requestId: string): any {
         const req = this.requests.get(requestId);
         if (!req) throw new Error("Request not found");

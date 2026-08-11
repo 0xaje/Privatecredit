@@ -10,8 +10,8 @@ import * as Contracts from "./index.js";
 
 declare module "@nomicfoundation/hardhat-ethers/types" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
-  getContractFactory(name: 'ArtefactRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ArtefactRegistry__factory>
-getContractFactory(name: 'CapacityManager', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CapacityManager__factory>
+  getContractFactory(name: 'CapacityManager', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CapacityManager__factory>
+getContractFactory(name: 'ArtefactRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ArtefactRegistry__factory>
 getContractFactory(name: 'EligibilityRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.EligibilityRegistry__factory>
 getContractFactory(name: 'LoanMarketplace', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.LoanMarketplace__factory>
 getContractFactory(name: 'LoanVault', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.LoanVault__factory>
@@ -24,8 +24,8 @@ getContractFactory(name: 'ILoanVault', signerOrOptions?: ethers.Signer | Factory
 getContractFactory(name: 'IRepaymentRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IRepaymentRegistry__factory>
 getContractFactory(name: 'PolicyConstants', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.PolicyConstants__factory>
 
-  getContractAt(name: 'ArtefactRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ArtefactRegistry>
-getContractAt(name: 'CapacityManager', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CapacityManager>
+  getContractAt(name: 'CapacityManager', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CapacityManager>
+getContractAt(name: 'ArtefactRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ArtefactRegistry>
 getContractAt(name: 'EligibilityRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.EligibilityRegistry>
 getContractAt(name: 'LoanMarketplace', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.LoanMarketplace>
 getContractAt(name: 'LoanVault', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.LoanVault>
@@ -38,8 +38,8 @@ getContractAt(name: 'ILoanVault', address: string | ethers.Addressable, signer?:
 getContractAt(name: 'IRepaymentRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IRepaymentRegistry>
 getContractAt(name: 'PolicyConstants', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.PolicyConstants>
 
-  deployContract(name: 'ArtefactRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ArtefactRegistry>
-deployContract(name: 'CapacityManager', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CapacityManager>
+  deployContract(name: 'CapacityManager', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CapacityManager>
+deployContract(name: 'ArtefactRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ArtefactRegistry>
 deployContract(name: 'EligibilityRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.EligibilityRegistry>
 deployContract(name: 'LoanMarketplace', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.LoanMarketplace>
 deployContract(name: 'LoanVault', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.LoanVault>
@@ -52,8 +52,8 @@ deployContract(name: 'ILoanVault', signerOrOptions?: ethers.Signer | DeployContr
 deployContract(name: 'IRepaymentRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IRepaymentRegistry>
 deployContract(name: 'PolicyConstants', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.PolicyConstants>
 
-  deployContract(name: 'ArtefactRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ArtefactRegistry>
-deployContract(name: 'CapacityManager', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CapacityManager>
+  deployContract(name: 'CapacityManager', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CapacityManager>
+deployContract(name: 'ArtefactRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ArtefactRegistry>
 deployContract(name: 'EligibilityRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.EligibilityRegistry>
 deployContract(name: 'LoanMarketplace', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.LoanMarketplace>
 deployContract(name: 'LoanVault', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.LoanVault>

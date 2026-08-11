@@ -79,15 +79,20 @@ contract LoanVault is Ownable, ReentrancyGuard, Pausable, ILoanVault {
         uint256 totalOwed = calculateTotalOwed(loanId);
         if (msg.value < totalOwed) revert InsufficientRepayment(loanId, msg.value, totalOwed);
 
-        loan.repaidAmount += msg.value;
+        loan.repaidAmount += totalOwed;
         loan.status = LoanStatus.REPAID;
 
         capacityManager.releaseCapacity(loan.borrower, loan.principal);
 
-        (bool success, ) = loan.borrower.call{value: loan.collateralAmount}("");
-        if (!success) revert TransferFailed();
+        uint256 excess = msg.value - totalOwed;
+        uint256 toBorrower = loan.collateralAmount + excess;
 
-        (bool successLender, ) = loan.lender.call{value: msg.value}("");
+        if (toBorrower > 0) {
+            (bool success, ) = loan.borrower.call{value: toBorrower}("");
+            if (!success) revert TransferFailed();
+        }
+
+        (bool successLender, ) = loan.lender.call{value: totalOwed}("");
         if (!successLender) revert TransferFailed();
 
         RepaymentOutcome outcome = block.timestamp <= loan.startTime + loan.duration 
@@ -101,12 +106,7 @@ contract LoanVault is Ownable, ReentrancyGuard, Pausable, ILoanVault {
         emit LoanRepaid(loanId, msg.value);
     }
     
-    function repayLoan(uint256 loanId, uint256 amount) external {
-        // the interface specifies this but my payable fn doesn't match the arg list exactly
-        // Wait, I will just implement the payable repayLoan(uint256 loanId) without amount,
-        // and a wrapper or just change the interface
-        revert("Use payable repayLoan(uint256)");
-    }
+
 
     function declareDefault(uint256 loanId) external nonReentrant whenNotPaused {
         Loan storage loan = loans[loanId];

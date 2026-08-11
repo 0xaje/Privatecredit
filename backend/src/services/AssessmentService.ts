@@ -20,8 +20,9 @@ const ELIGIBILITY_REGISTRY_ADDRESS = process.env.ELIGIBILITY_REGISTRY_ADDRESS ||
 
 // Minimal ABI required for registration and reading
 const ELIGIBILITY_ABI = [
-    "function registerEligibility(address borrower, uint8 riskTier, uint256 maxActiveCredit, uint256 maxLtvBps, uint256 validUntil, uint256 policyVersion, bytes32 evidenceCommitment, bytes32 attestcoinContext) external",
-    "function getEligibility(address borrower) external view returns (tuple(address borrower, uint8 riskTier, uint256 maxActiveCredit, uint256 maxLtvBps, uint256 validUntil, uint256 policyVersion, bytes32 evidenceCommitment, bytes32 attestcoinContext, uint256 nonce, bool active))"
+    "function registerEligibility(tuple(uint8 riskTier, uint256 maxActiveCredit, uint256 maxLtvBps, uint256 validUntil, uint256 policyVersion, bytes32 evidenceCommitment) params, uint8 v, bytes32 r, bytes32 s, tuple(uint32 chainKey, uint64 headerNumber, bytes txBytes, bytes merkleProof, bytes continuityProof) proof) external",
+    "function getEligibility(address borrower) external view returns (tuple(address borrower, uint8 riskTier, uint256 maxActiveCredit, uint256 maxLtvBps, uint256 validUntil, uint256 policyVersion, bytes32 evidenceCommitment, bytes32 attestcoinContext, uint256 nonce, bool active))",
+    "function getEligibilityNonce(address borrower) external view returns (uint256)"
 ];
 
 export class AssessmentService {
@@ -108,10 +109,15 @@ export class AssessmentService {
         }
 
         // 2. Generate EIP-191 Signature
+        const nonce = await this.registryContract.getEligibilityNonce(borrower);
+        const nextNonce = nonce + 1n;
+        const network = await this.provider.getNetwork();
+        const chainId = network.chainId;
+
         const messageHash = ethers.keccak256(
             ethers.solidityPacked(
-                ['address', 'uint8', 'uint256', 'uint256', 'uint256', 'uint256', 'bytes32'],
-                [borrower, riskTierEnum, policyOutput.maxActiveCredit, policyOutput.maxLtvBps, policyOutput.validUntil, policyOutput.policyVersion, commitment]
+                ['address', 'uint8', 'uint256', 'uint256', 'uint256', 'uint256', 'bytes32', 'uint256', 'uint256', 'address'],
+                [borrower, riskTierEnum, policyOutput.maxActiveCredit, policyOutput.maxLtvBps, policyOutput.validUntil, policyOutput.policyVersion, commitment, nextNonce, chainId, ELIGIBILITY_REGISTRY_ADDRESS]
             )
         );
 
