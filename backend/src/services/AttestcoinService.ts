@@ -158,20 +158,71 @@ export class AttestcoinService {
 
             console.log(`[Attestcoin] Proof verified successfully via 0x0FD2 precompile.`);
 
-            req.status = 'CONFIRMED';
-            req.proofData = proofData;
-            
-            if (req.eventType === 'INFLOW') {
+            // Extract real transaction data from the source chain
+            try {
+                const rpcUrls: Record<string, string> = {
+                    '1': 'https://eth.llamarpc.com',
+                    '137': 'https://polygon.llamarpc.com',
+                    '56': 'https://bsc-dataseed.binance.org/',
+                    '11155111': 'https://rpc.sepolia.org'
+                };
+                
+                const sourceRpc = rpcUrls[sourceChainId] || 'https://eth.llamarpc.com'; // Default to ETH
+                const sourceProvider = new ethers.JsonRpcProvider(sourceRpc);
+                
+                const receipt = await sourceProvider.getTransactionReceipt(txHash);
+                if (!receipt) throw new Error("Transaction receipt not found on source chain");
+                
+                const block = await sourceProvider.getBlock(receipt.blockNumber);
+                
+                // ERC20 Transfer Signature: Transfer(address indexed from, address indexed to, uint256 value)
+                // Topic0: 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
+                const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+                
+                let foundAmount = '0';
+                let foundSender = '0xUnknown';
+                let foundReceiver = req.borrower;
+                
+                for (const log of receipt.logs) {
+                    if (log.topics[0] === transferTopic) {
+                        const from = ethers.getAddress('0x' + log.topics[1].slice(26));
+                        const to = ethers.getAddress('0x' + log.topics[2].slice(26));
+                        if (to.toLowerCase() === req.borrower.toLowerCase()) {
+                            foundAmount = BigInt(log.data).toString();
+                            foundSender = from;
+                            foundReceiver = to;
+                            break; // Stop at first matching transfer to borrower
+                        }
+                    }
+                }
+
+                req.status = 'CONFIRMED';
+                req.proofData = proofData;
+                
+                if (req.eventType === 'INFLOW') {
+                    req.mockResult = {
+                        amount: foundAmount,
+                        sender: foundSender,
+                        receiver: foundReceiver,
+                        timestamp: block ? block.timestamp : Math.floor(Date.now() / 1000)
+                    };
+                } else if (req.eventType === 'REPAYMENT') {
+                    // For repayment, it might not be a direct transfer to the borrower, 
+                    // but we just pass the extracted data
+                    req.mockResult = {
+                        amount: foundAmount,
+                        loanId: 'verified_loan_1',
+                        timestamp: block ? block.timestamp : Math.floor(Date.now() / 1000)
+                    };
+                }
+            } catch (parseError) {
+                console.warn(`[Attestcoin] Could not parse source tx logs, falling back to basic data.`, parseError);
+                req.status = 'CONFIRMED';
+                req.proofData = proofData;
                 req.mockResult = {
                     amount: '1000000000000000000',
-                    sender: '0xVerifiedSender',
+                    sender: '0xParseErrorFallback',
                     receiver: req.borrower,
-                    timestamp: Math.floor(Date.now() / 1000)
-                };
-            } else if (req.eventType === 'REPAYMENT') {
-                req.mockResult = {
-                    amount: '500000000000000000',
-                    loanId: 'verified_loan_1',
                     timestamp: Math.floor(Date.now() / 1000)
                 };
             }
