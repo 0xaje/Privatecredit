@@ -46,7 +46,7 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
         Number(borrowForm.maxDuration),
         borrowForm.collateral
       );
-      setResult(`Request created! ID: ${res.requestId}, Tx: ${res.txHash?.slice(0, 10)}...`);
+      setResult(`Request created! Tx: ${res.txHash?.slice(0, 10)}...`);
       onLoanAction();
       setShowBorrowForm(false);
     } catch (err: any) {
@@ -60,7 +60,7 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
     setResult(null);
     try {
       const res = await api.acceptOffer(Number(acceptForm.offerId), acceptForm.collateralAmount);
-      setResult(`Offer accepted! Loan ID: ${res.loanId}, Tx: ${res.txHash?.slice(0, 10)}...`);
+      setResult(`Offer accepted! Tx: ${res.txHash?.slice(0, 10)}...`);
       onLoanAction();
       setShowAcceptForm(false);
     } catch (err: any) {
@@ -80,7 +80,7 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
         offerForm.requiredCollateral,
         offerForm.principal
       );
-      setResult(`Offer created! ID: ${res.offerId}, Tx: ${res.txHash?.slice(0, 10)}...`);
+      setResult(`Offer created! Tx: ${res.txHash?.slice(0, 10)}...`);
       onLoanAction();
       setShowOfferForm(false);
     } catch (err: any) {

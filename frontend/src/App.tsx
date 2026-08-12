@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Activity, LayoutDashboard, Shield, User, Plus, Zap, X, AlertTriangle } from 'lucide-react';
+import { Activity, LayoutDashboard, Shield, User, Plus, Zap, X } from 'lucide-react';
 import type { Node } from 'reactflow';
+import { createAppKit, useAppKit, useAppKitAccount } from '@reown/appkit/react';
+import { EthersAdapter } from '@reown/appkit-adapter-ethers';
+import { creditCoin3Testnet, mainnet } from '@reown/appkit/networks';
 import GraphCanvas from './components/GraphCanvas';
 import Inspector from './components/Inspector';
 import ReputationView from './views/ReputationView';
@@ -9,18 +12,29 @@ import JudgeView from './views/JudgeView';
 import { api } from './api/client';
 import './App.css';
 
+// Reown AppKit setup
+const projectId = 'b56e18d47c72ab683b108171285093e2'; // Replace with your Reown Project ID
+
+const appKit = createAppKit({
+  adapters: [new EthersAdapter()],
+  networks: [creditCoin3Testnet, mainnet],
+  metadata: {
+    name: 'PrivateCredit Graph',
+    description: 'PrivateCredit Integration with Creditcoin',
+    url: 'https://privatecredit.app',
+    icons: ['https://avatars.githubusercontent.com/u/37784886']
+  },
+  projectId,
+  features: { analytics: false }
+});
+
 function App() {
   const [activeView, setActiveView] = useState('overview');
-  const [wallet, setWallet] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [judgeMode, setJudgeMode] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [showAddEvidence, setShowAddEvidence] = useState(false);
   const [evidenceNodeIds, setEvidenceNodeIds] = useState<string[]>([]);
-  const [connecting, setConnecting] = useState(false);
-  const [walletError, setWalletError] = useState<string | null>(null);
-
-  // Bottom bar live data
   const [insightScore, setInsightScore] = useState<number | null>(null);
   const [capacity, setCapacity] = useState<{ available: string; used: string } | null>(null);
 
@@ -28,37 +42,15 @@ function App() {
     setRefreshTrigger(t => t + 1);
   }, []);
 
-  // ─── Wallet Connection ───
-  const handleConnect = async () => {
-    setConnecting(true);
-    setWalletError(null);
+  const { address: wallet, isConnected } = useAppKitAccount();
+  const { open: openAppKit } = useAppKit();
 
-    const eth = (window as any).ethereum;
-    if (!eth) {
-      setWalletError('No wallet detected. Please install MetaMask or another Web3 wallet.');
-      setConnecting(false);
-      return;
-    }
-
-    try {
-      const accounts: string[] = await eth.request({ method: 'eth_requestAccounts' });
-      if (accounts.length > 0) {
-        setWallet(accounts[0]);
-      } else {
-        setWalletError('No accounts returned. Please unlock your wallet.');
-      }
-    } catch (err: any) {
-      if (err.code === 4001) {
-        setWalletError('Connection rejected. Please approve the wallet request.');
-      } else {
-        setWalletError(err.message || 'Failed to connect wallet.');
-      }
-    }
-    setConnecting(false);
+  const handleConnect = () => {
+    openAppKit();
   };
 
   const handleDisconnect = () => {
-    setWallet(null);
+    appKit.disconnect();
     setSelectedNode(null);
     setEvidenceNodeIds([]);
     setInsightScore(null);
@@ -67,22 +59,17 @@ function App() {
     setActiveView('overview');
   };
 
-  // Listen for account changes from MetaMask
+  // When wallet disconnects via AppKit, clear states
   useEffect(() => {
-    const eth = (window as any).ethereum;
-    if (!eth) return;
-
-    const handleAccountsChanged = (accounts: string[]) => {
-      if (accounts.length === 0) {
-        handleDisconnect();
-      } else {
-        setWallet(accounts[0]);
-      }
-    };
-
-    eth.on('accountsChanged', handleAccountsChanged);
-    return () => eth.removeListener('accountsChanged', handleAccountsChanged);
-  }, []);
+    if (!isConnected) {
+      setSelectedNode(null);
+      setEvidenceNodeIds([]);
+      setInsightScore(null);
+      setCapacity(null);
+      setJudgeMode(false);
+      setActiveView('overview');
+    }
+  }, [isConnected]);
 
   // ─── Fetch live stats ───
   useEffect(() => {
@@ -154,26 +141,19 @@ function App() {
           >
             ⚖ Judge: {judgeMode ? 'ON' : 'OFF'}
           </span>
-          {wallet ? (
+          {isConnected && wallet ? (
             <button className="wallet-btn connected" onClick={handleDisconnect}>
               <span className="wallet-dot" /> {wallet.slice(0, 6)}...{wallet.slice(-4)}
             </button>
           ) : (
-            <button className="wallet-btn" onClick={handleConnect} disabled={connecting}>
-              {connecting ? 'Connecting...' : 'Connect Wallet'}
+            <button className="wallet-btn" onClick={handleConnect}>
+              Connect Wallet
             </button>
           )}
         </div>
       </header>
 
-      {/* Wallet Error Toast */}
-      {walletError && (
-        <div className="wallet-error-toast">
-          <AlertTriangle size={16} />
-          <span>{walletError}</span>
-          <button onClick={() => setWalletError(null)}><X size={14} /></button>
-        </div>
-      )}
+
 
       {/* Left Side Panel */}
       <aside className="left-views">
@@ -226,7 +206,7 @@ function App() {
       {/* Center Canvas */}
       <main className="center-canvas">
         <GraphCanvas
-          borrowerAddress={wallet}
+          borrowerAddress={wallet ?? null}
           onNodeSelect={setSelectedNode}
           refreshTrigger={refreshTrigger}
         />
