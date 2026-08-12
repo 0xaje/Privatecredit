@@ -111,10 +111,10 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
         uint256 amount = offerDeposits[offerId];
         offerDeposits[offerId] = 0;
 
+        emit OfferWithdrawn(offerId);
+
         (bool success, ) = msg.sender.call{value: amount}("");
         if (!success) revert TransferFailed();
-
-        emit OfferWithdrawn(offerId);
     }
 
     function acceptOffer(uint256 offerId) external payable nonReentrant whenNotPaused {
@@ -133,7 +133,10 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
         offerDeposits[offerId] = 0;
         
         uint256 totalToSend = principal + msg.value;
-        uint256 loanId = loanVault.originateLoan{value: totalToSend}(
+
+        emit OfferAccepted(offerId, offer.requestId);
+
+        loanVault.originateLoan{value: totalToSend}(
             req.borrower,
             offer.lender,
             principal,
@@ -141,8 +144,6 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
             offer.duration,
             msg.value
         );
-
-        emit OfferAccepted(offerId, offer.requestId);
     }
 
     function getBorrowRequest(uint256 requestId) external view returns (BorrowRequest memory) {

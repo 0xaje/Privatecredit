@@ -69,17 +69,35 @@ describe("PrivateCredit Graph Integration Demo", function () {
     const VALID_UNTIL = BigInt(Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60);
     const POLICY_VERSION = 1n;
     const EVIDENCE_COMMITMENT = ethers.id("evidence123");
-    const ATTESTCOIN_CONTEXT = ethers.id("attestcoinContext123");
+    const nonce = 1n;
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    const registryAddress = await eligibilityRegistry.getAddress();
 
-    await eligibilityRegistry.registerEligibility(
-      alice.address,
-      LOW_RISK,
-      MAX_CREDIT,
-      MAX_LTV_BPS,
-      VALID_UNTIL,
-      POLICY_VERSION,
-      EVIDENCE_COMMITMENT,
-      ATTESTCOIN_CONTEXT
+    const messageHash = ethers.solidityPackedKeccak256(
+      ["address", "uint8", "uint256", "uint256", "uint256", "uint256", "bytes32", "uint256", "uint256", "address"],
+      [alice.address, LOW_RISK, MAX_CREDIT, MAX_LTV_BPS, VALID_UNTIL, POLICY_VERSION, EVIDENCE_COMMITMENT, nonce, chainId, registryAddress]
+    );
+    
+    const signature = await deployer.signMessage(ethers.getBytes(messageHash));
+    const sig = ethers.Signature.from(signature);
+
+    await eligibilityRegistry.connect(alice).registerEligibility(
+      {
+        riskTier: LOW_RISK,
+        maxActiveCredit: MAX_CREDIT,
+        maxLtvBps: MAX_LTV_BPS,
+        validUntil: VALID_UNTIL,
+        policyVersion: POLICY_VERSION,
+        evidenceCommitment: EVIDENCE_COMMITMENT
+      },
+      sig.v, sig.r, sig.s,
+      {
+        chainKey: 0,
+        headerNumber: 0,
+        txBytes: "0x",
+        merkleProof: "0x",
+        continuityProof: "0x"
+      }
     );
 
     expect(await capacityManager.availableCapacity(alice.address)).to.equal(MAX_CREDIT);

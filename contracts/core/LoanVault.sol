@@ -64,10 +64,11 @@ contract LoanVault is Ownable, ReentrancyGuard, Pausable, ILoanVault {
             status: LoanStatus.ACTIVE
         });
 
+        emit LoanOriginated(loanId, borrower, lender, principal);
+
         (bool success, ) = borrower.call{value: principal}("");
         if (!success) revert TransferFailed();
 
-        emit LoanOriginated(loanId, borrower, lender, principal);
         return loanId;
     }
 
@@ -87,14 +88,6 @@ contract LoanVault is Ownable, ReentrancyGuard, Pausable, ILoanVault {
         uint256 excess = msg.value - totalOwed;
         uint256 toBorrower = loan.collateralAmount + excess;
 
-        if (toBorrower > 0) {
-            (bool success, ) = loan.borrower.call{value: toBorrower}("");
-            if (!success) revert TransferFailed();
-        }
-
-        (bool successLender, ) = loan.lender.call{value: totalOwed}("");
-        if (!successLender) revert TransferFailed();
-
         RepaymentOutcome outcome = block.timestamp <= loan.startTime + loan.duration 
             ? RepaymentOutcome.ON_TIME 
             : RepaymentOutcome.LATE;
@@ -104,6 +97,14 @@ contract LoanVault is Ownable, ReentrancyGuard, Pausable, ILoanVault {
         }
 
         emit LoanRepaid(loanId, msg.value);
+
+        if (toBorrower > 0) {
+            (bool success, ) = loan.borrower.call{value: toBorrower}("");
+            if (!success) revert TransferFailed();
+        }
+
+        (bool successLender, ) = loan.lender.call{value: totalOwed}("");
+        if (!successLender) revert TransferFailed();
     }
     
 
@@ -115,15 +116,15 @@ contract LoanVault is Ownable, ReentrancyGuard, Pausable, ILoanVault {
 
         loan.status = LoanStatus.DEFAULTED;
 
-        (bool success, ) = loan.lender.call{value: loan.collateralAmount}("");
-        if (!success) revert TransferFailed();
-
         if (address(repaymentRegistry) != address(0)) {
             repaymentRegistry.recordRepayment(loanId, loan.borrower, 0, RepaymentOutcome.DEFAULT);
         }
 
         emit LoanDefaulted(loanId);
         emit CollateralSeized(loanId, loan.lender, loan.collateralAmount);
+
+        (bool success, ) = loan.lender.call{value: loan.collateralAmount}("");
+        if (!success) revert TransferFailed();
     }
 
     function getLoan(uint256 loanId) external view returns (Loan memory) {

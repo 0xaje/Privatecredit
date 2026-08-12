@@ -39,7 +39,7 @@ contract CapacityManagerTest is Test {
         eligibilityRegistry.setRegistrar(vm.addr(registrarPk));
 
         bytes32 messageHash = keccak256(abi.encodePacked(
-            borrower, RiskTier.LOW, uint256(5000e18), uint256(6500), block.timestamp + 30 days, uint256(1), bytes32(0)
+            borrower, RiskTier.LOW, uint256(5000e18), uint256(6500), block.timestamp + 30 days, uint256(1), bytes32(0), uint256(1), block.chainid, address(eligibilityRegistry)
         ));
         bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(registrarPk, ethSignedMessageHash);
