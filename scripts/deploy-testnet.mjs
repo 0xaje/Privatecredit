@@ -30,12 +30,38 @@ if (network.chainId !== EXPECTED_CHAIN_ID) {
 }
 
 console.log(`Deployment preflight passed: creditcoinTestnet chain ${network.chainId}, deployer ${deployerAddress}.`);
-const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-const result = spawnSync(
-  npxCommand,
-  ['hardhat', 'ignition', 'deploy', 'ignition/modules/PrivateCredit.ts', '--network', 'creditcoinTestnet'],
-  { stdio: 'inherit', env: process.env },
-);
+
+const hardhatArgs = [
+  'hardhat',
+  'ignition',
+  'deploy',
+  'ignition/modules/PrivateCredit.ts',
+  '--network',
+  'creditcoinTestnet',
+];
+
+let result;
+if (process.platform === 'win32') {
+  result = spawnSync(
+    process.env.ComSpec || 'cmd.exe',
+    ['/d', '/s', '/c', 'npx', ...hardhatArgs],
+    {
+      stdio: 'inherit',
+      env: process.env,
+      cwd: process.cwd(),
+    },
+  );
+} else {
+  result = spawnSync(
+    'npx',
+    hardhatArgs,
+    {
+      stdio: 'inherit',
+      env: process.env,
+      cwd: process.cwd(),
+    },
+  );
+}
 
 if (result.error) throw result.error;
-process.exit(result.status ?? 1);
+process.exit(typeof result.status === 'number' ? result.status : 1);
