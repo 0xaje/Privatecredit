@@ -30,9 +30,9 @@ if (network.chainId !== EXPECTED_CHAIN_ID) {
 }
 
 console.log(`Deployment preflight passed: creditcoinTestnet chain ${network.chainId}, deployer ${deployerAddress}.`);
-
+const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 const result = spawnSync(
-  'npx',
+  npxCommand,
   ['hardhat', 'ignition', 'deploy', 'ignition/modules/PrivateCredit.ts', '--network', 'creditcoinTestnet'],
   { stdio: 'inherit', env: process.env },
 );
