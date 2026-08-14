@@ -8,7 +8,7 @@
     "test": "hardhat test",
     "test:contracts": "hardhat test test/Integration.ts",
     "deploy:local": "hardhat ignition deploy ignition/modules/PrivateCredit.ts --network localhost",
-    "deploy:testnet": "hardhat ignition deploy ignition/modules/PrivateCredit.ts --network creditcoinTestnet"
+    "deploy:testnet": "node scripts/deploy-testnet.mjs"
   },
   "keywords": [],
   "author": "",
