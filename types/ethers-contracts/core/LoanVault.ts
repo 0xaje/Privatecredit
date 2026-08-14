@@ -3,11 +3,11 @@
 /* eslint-disable */
 import type { BaseContract, BigNumberish, BytesLike, FunctionFragment, Result, Interface, EventFragment, AddressLike, ContractRunner, ContractMethod, Listener } from "ethers"
 import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, TypedLogDescription, TypedListener, TypedContractMethod } from "../common.js"
-  
+
     export type LoanStruct = {loanId: BigNumberish, borrower: AddressLike, lender: AddressLike, principal: BigNumberish, aprBps: BigNumberish, startTime: BigNumberish, duration: BigNumberish, collateralAmount: BigNumberish, repaidAmount: BigNumberish, status: BigNumberish}
 
     export type LoanStructOutput = [loanId: bigint, borrower: string, lender: string, principal: bigint, aprBps: bigint, startTime: bigint, duration: bigint, collateralAmount: bigint, repaidAmount: bigint, status: bigint] & {loanId: bigint, borrower: string, lender: string, principal: bigint, aprBps: bigint, startTime: bigint, duration: bigint, collateralAmount: bigint, repaidAmount: bigint, status: bigint }
-  
+
 
   export interface LoanVaultInterface extends Interface {
     getFunction(nameOrSignature: "calculateInterest" | "calculateTotalOwed" | "capacityManager" | "declareDefault" | "getLoan" | "loans" | "marketplace" | "nextLoanId" | "originateLoan" | "owner" | "paused" | "renounceOwnership" | "repayLoan" | "repaymentRegistry" | "setMarketplace" | "setRepaymentRegistry" | "transferOwnership"): FunctionFragment;
@@ -51,7 +51,7 @@ decodeFunctionResult(functionFragment: 'setRepaymentRegistry', data: BytesLike):
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
   }
 
-  
+
     export namespace CollateralSeizedEvent {
       export type InputTuple = [loanId: BigNumberish, lender: AddressLike, amount: BigNumberish];
       export type OutputTuple = [loanId: bigint, lender: string, amount: bigint];
@@ -62,7 +62,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
       export type LogDescription = TypedLogDescription<Event>
     }
 
-  
+
 
     export namespace LoanDefaultedEvent {
       export type InputTuple = [loanId: BigNumberish];
@@ -74,7 +74,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
       export type LogDescription = TypedLogDescription<Event>
     }
 
-  
+
 
     export namespace LoanOriginatedEvent {
       export type InputTuple = [loanId: BigNumberish, borrower: AddressLike, lender: AddressLike, principal: BigNumberish];
@@ -86,7 +86,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
       export type LogDescription = TypedLogDescription<Event>
     }
 
-  
+
 
     export namespace LoanRepaidEvent {
       export type InputTuple = [loanId: BigNumberish, amount: BigNumberish];
@@ -98,7 +98,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
       export type LogDescription = TypedLogDescription<Event>
     }
 
-  
+
 
     export namespace OwnershipTransferredEvent {
       export type InputTuple = [previousOwner: AddressLike, newOwner: AddressLike];
@@ -110,7 +110,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
       export type LogDescription = TypedLogDescription<Event>
     }
 
-  
+
 
     export namespace PausedEvent {
       export type InputTuple = [account: AddressLike];
@@ -122,7 +122,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
       export type LogDescription = TypedLogDescription<Event>
     }
 
-  
+
 
     export namespace UnpausedEvent {
       export type InputTuple = [account: AddressLike];
@@ -134,16 +134,16 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
       export type LogDescription = TypedLogDescription<Event>
     }
 
-  
+
 
   export interface LoanVault extends BaseContract {
-    
+
     connect(runner?: ContractRunner | null): LoanVault;
     waitForDeployment(): Promise<this>;
 
     interface: LoanVaultInterface;
 
-    
+
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
@@ -157,7 +157,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 
   on<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   on<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
-  
+
   once<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   once<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
 
@@ -168,142 +168,142 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
   removeAllListeners<TCEvent extends TypedContractEvent>(event?: TCEvent): Promise<this>
 
 
-    
-    
+
+
     calculateInterest: TypedContractMethod<
       [loanId: BigNumberish, ],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     calculateTotalOwed: TypedContractMethod<
       [loanId: BigNumberish, ],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     capacityManager: TypedContractMethod<
       [],
       [string],
       'view'
     >
-    
 
-    
+
+
     declareDefault: TypedContractMethod<
       [loanId: BigNumberish, ],
       [void],
       'nonpayable'
     >
-    
 
-    
+
+
     getLoan: TypedContractMethod<
       [loanId: BigNumberish, ],
       [LoanStructOutput],
       'view'
     >
-    
 
-    
+
+
     loans: TypedContractMethod<
       [arg0: BigNumberish, ],
       [[bigint, string, string, bigint, bigint, bigint, bigint, bigint, bigint, bigint] & {loanId: bigint, borrower: string, lender: string, principal: bigint, aprBps: bigint, startTime: bigint, duration: bigint, collateralAmount: bigint, repaidAmount: bigint, status: bigint }],
       'view'
     >
-    
 
-    
+
+
     marketplace: TypedContractMethod<
       [],
       [string],
       'view'
     >
-    
 
-    
+
+
     nextLoanId: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     originateLoan: TypedContractMethod<
       [borrower: AddressLike, lender: AddressLike, principal: BigNumberish, aprBps: BigNumberish, duration: BigNumberish, collateralAmount: BigNumberish, ],
       [bigint],
       'payable'
     >
-    
 
-    
+
+
     owner: TypedContractMethod<
       [],
       [string],
       'view'
     >
-    
 
-    
+
+
     paused: TypedContractMethod<
       [],
       [boolean],
       'view'
     >
-    
 
-    
+
+
     renounceOwnership: TypedContractMethod<
       [],
       [void],
       'nonpayable'
     >
-    
 
-    
+
+
     repayLoan: TypedContractMethod<
       [loanId: BigNumberish, ],
       [void],
       'payable'
     >
-    
 
-    
+
+
     repaymentRegistry: TypedContractMethod<
       [],
       [string],
       'view'
     >
-    
 
-    
+
+
     setMarketplace: TypedContractMethod<
       [_marketplace: AddressLike, ],
       [void],
       'nonpayable'
     >
-    
 
-    
+
+
     setRepaymentRegistry: TypedContractMethod<
       [_repaymentRegistry: AddressLike, ],
       [void],
       'nonpayable'
     >
-    
 
-    
+
+
     transferOwnership: TypedContractMethod<
       [newOwner: AddressLike, ],
       [void],
       'nonpayable'
     >
-    
+
 
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
@@ -403,33 +403,33 @@ getEvent(key: 'Paused'): TypedContractEvent<PausedEvent.InputTuple, PausedEvent.
 getEvent(key: 'Unpaused'): TypedContractEvent<UnpausedEvent.InputTuple, UnpausedEvent.OutputTuple, UnpausedEvent.OutputObject>;
 
     filters: {
-      
+
       'CollateralSeized(uint256,address,uint256)': TypedContractEvent<CollateralSeizedEvent.InputTuple, CollateralSeizedEvent.OutputTuple, CollateralSeizedEvent.OutputObject>;
       CollateralSeized: TypedContractEvent<CollateralSeizedEvent.InputTuple, CollateralSeizedEvent.OutputTuple, CollateralSeizedEvent.OutputObject>;
-    
+
 
       'LoanDefaulted(uint256)': TypedContractEvent<LoanDefaultedEvent.InputTuple, LoanDefaultedEvent.OutputTuple, LoanDefaultedEvent.OutputObject>;
       LoanDefaulted: TypedContractEvent<LoanDefaultedEvent.InputTuple, LoanDefaultedEvent.OutputTuple, LoanDefaultedEvent.OutputObject>;
-    
+
 
       'LoanOriginated(uint256,address,address,uint256)': TypedContractEvent<LoanOriginatedEvent.InputTuple, LoanOriginatedEvent.OutputTuple, LoanOriginatedEvent.OutputObject>;
       LoanOriginated: TypedContractEvent<LoanOriginatedEvent.InputTuple, LoanOriginatedEvent.OutputTuple, LoanOriginatedEvent.OutputObject>;
-    
+
 
       'LoanRepaid(uint256,uint256)': TypedContractEvent<LoanRepaidEvent.InputTuple, LoanRepaidEvent.OutputTuple, LoanRepaidEvent.OutputObject>;
       LoanRepaid: TypedContractEvent<LoanRepaidEvent.InputTuple, LoanRepaidEvent.OutputTuple, LoanRepaidEvent.OutputObject>;
-    
+
 
       'OwnershipTransferred(address,address)': TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
       OwnershipTransferred: TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
-    
+
 
       'Paused(address)': TypedContractEvent<PausedEvent.InputTuple, PausedEvent.OutputTuple, PausedEvent.OutputObject>;
       Paused: TypedContractEvent<PausedEvent.InputTuple, PausedEvent.OutputTuple, PausedEvent.OutputObject>;
-    
+
 
       'Unpaused(address)': TypedContractEvent<UnpausedEvent.InputTuple, UnpausedEvent.OutputTuple, UnpausedEvent.OutputObject>;
       Unpaused: TypedContractEvent<UnpausedEvent.InputTuple, UnpausedEvent.OutputTuple, UnpausedEvent.OutputObject>;
-    
+
     };
   }

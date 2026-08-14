@@ -3,12 +3,12 @@
 /* eslint-disable */
 import type { BaseContract, BytesLike, FunctionFragment, Result, Interface, ContractRunner, ContractMethod, Listener } from "ethers"
 import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, TypedListener, TypedContractMethod } from "../common.js"
-  
+
 
   export interface PolicyConstantsInterface extends Interface {
     getFunction(nameOrSignature: "BPS_DENOMINATOR" | "DEFAULT_ELIGIBILITY_DURATION" | "HIGH_RISK_MAX_CREDIT" | "HIGH_RISK_MAX_LTV_BPS" | "LOW_RISK_MAX_CREDIT" | "LOW_RISK_MAX_LTV_BPS" | "MAX_APR_BPS" | "MAX_LOAN_DURATION" | "MEDIUM_RISK_MAX_CREDIT" | "MEDIUM_RISK_MAX_LTV_BPS" | "MIN_COLLATERAL_BPS"): FunctionFragment;
 
-    
+
 
     encodeFunctionData(functionFragment: 'BPS_DENOMINATOR', values?: undefined): string;
 encodeFunctionData(functionFragment: 'DEFAULT_ELIGIBILITY_DURATION', values?: undefined): string;
@@ -35,16 +35,16 @@ decodeFunctionResult(functionFragment: 'MEDIUM_RISK_MAX_LTV_BPS', data: BytesLik
 decodeFunctionResult(functionFragment: 'MIN_COLLATERAL_BPS', data: BytesLike): Result;
   }
 
-  
+
 
   export interface PolicyConstants extends BaseContract {
-    
+
     connect(runner?: ContractRunner | null): PolicyConstants;
     waitForDeployment(): Promise<this>;
 
     interface: PolicyConstantsInterface;
 
-    
+
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
@@ -58,7 +58,7 @@ decodeFunctionResult(functionFragment: 'MIN_COLLATERAL_BPS', data: BytesLike): R
 
   on<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   on<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
-  
+
   once<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   once<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
 
@@ -69,94 +69,94 @@ decodeFunctionResult(functionFragment: 'MIN_COLLATERAL_BPS', data: BytesLike): R
   removeAllListeners<TCEvent extends TypedContractEvent>(event?: TCEvent): Promise<this>
 
 
-    
-    
+
+
     BPS_DENOMINATOR: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     DEFAULT_ELIGIBILITY_DURATION: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     HIGH_RISK_MAX_CREDIT: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     HIGH_RISK_MAX_LTV_BPS: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     LOW_RISK_MAX_CREDIT: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     LOW_RISK_MAX_LTV_BPS: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     MAX_APR_BPS: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     MAX_LOAN_DURATION: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     MEDIUM_RISK_MAX_CREDIT: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     MEDIUM_RISK_MAX_LTV_BPS: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     MIN_COLLATERAL_BPS: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
-    
+
 
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
@@ -217,9 +217,9 @@ getFunction(nameOrSignature: 'MIN_COLLATERAL_BPS'): TypedContractMethod<
       'view'
     >;
 
-    
+
 
     filters: {
-      
+
     };
   }

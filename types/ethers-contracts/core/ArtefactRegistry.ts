@@ -3,20 +3,21 @@
 /* eslint-disable */
 import type { BaseContract, BigNumberish, BytesLike, FunctionFragment, Result, Interface, EventFragment, AddressLike, ContractRunner, ContractMethod, Listener } from "ethers"
 import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, TypedLogDescription, TypedListener, TypedContractMethod } from "../common.js"
-  
+
     export type ArtefactStruct = {artefactId: BytesLike, creator: AddressLike, snapshotCommitment: BytesLike, eligibilityNonce: BigNumberish, policyReference: BytesLike, timestamp: BigNumberish, contentReference: string}
 
     export type ArtefactStructOutput = [artefactId: string, creator: string, snapshotCommitment: string, eligibilityNonce: bigint, policyReference: string, timestamp: bigint, contentReference: string] & {artefactId: string, creator: string, snapshotCommitment: string, eligibilityNonce: bigint, policyReference: string, timestamp: bigint, contentReference: string }
-  
+
 
   export interface ArtefactRegistryInterface extends Interface {
-    getFunction(nameOrSignature: "artefacts" | "commitArtefact" | "creatorArtefacts" | "getArtefact" | "getArtefactsByCreator" | "verifyArtefact"): FunctionFragment;
+    getFunction(nameOrSignature: "artefacts" | "commitArtefact" | "creatorArtefacts" | "eligibilityRegistry" | "getArtefact" | "getArtefactsByCreator" | "verifyArtefact"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "ArtefactCommitted" | "ArtefactVerified"): EventFragment;
 
     encodeFunctionData(functionFragment: 'artefacts', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'commitArtefact', values: [BytesLike, BigNumberish, BytesLike, string]): string;
 encodeFunctionData(functionFragment: 'creatorArtefacts', values: [AddressLike, BigNumberish]): string;
+encodeFunctionData(functionFragment: 'eligibilityRegistry', values?: undefined): string;
 encodeFunctionData(functionFragment: 'getArtefact', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'getArtefactsByCreator', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'verifyArtefact', values: [BytesLike, BytesLike]): string;
@@ -24,12 +25,13 @@ encodeFunctionData(functionFragment: 'verifyArtefact', values: [BytesLike, Bytes
     decodeFunctionResult(functionFragment: 'artefacts', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'commitArtefact', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'creatorArtefacts', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'eligibilityRegistry', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getArtefact', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getArtefactsByCreator', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'verifyArtefact', data: BytesLike): Result;
   }
 
-  
+
     export namespace ArtefactCommittedEvent {
       export type InputTuple = [artefactId: BytesLike, creator: AddressLike, snapshotCommitment: BytesLike];
       export type OutputTuple = [artefactId: string, creator: string, snapshotCommitment: string];
@@ -40,7 +42,7 @@ decodeFunctionResult(functionFragment: 'verifyArtefact', data: BytesLike): Resul
       export type LogDescription = TypedLogDescription<Event>
     }
 
-  
+
 
     export namespace ArtefactVerifiedEvent {
       export type InputTuple = [artefactId: BytesLike, status: BigNumberish];
@@ -52,16 +54,16 @@ decodeFunctionResult(functionFragment: 'verifyArtefact', data: BytesLike): Resul
       export type LogDescription = TypedLogDescription<Event>
     }
 
-  
+
 
   export interface ArtefactRegistry extends BaseContract {
-    
+
     connect(runner?: ContractRunner | null): ArtefactRegistry;
     waitForDeployment(): Promise<this>;
 
     interface: ArtefactRegistryInterface;
 
-    
+
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
@@ -75,7 +77,7 @@ decodeFunctionResult(functionFragment: 'verifyArtefact', data: BytesLike): Resul
 
   on<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   on<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
-  
+
   once<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   once<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
 
@@ -86,54 +88,62 @@ decodeFunctionResult(functionFragment: 'verifyArtefact', data: BytesLike): Resul
   removeAllListeners<TCEvent extends TypedContractEvent>(event?: TCEvent): Promise<this>
 
 
-    
-    
+
+
     artefacts: TypedContractMethod<
       [arg0: BytesLike, ],
       [[string, string, string, bigint, string, bigint, string] & {artefactId: string, creator: string, snapshotCommitment: string, eligibilityNonce: bigint, policyReference: string, timestamp: bigint, contentReference: string }],
       'view'
     >
-    
 
-    
+
+
     commitArtefact: TypedContractMethod<
       [snapshotCommitment: BytesLike, eligibilityNonce: BigNumberish, policyReference: BytesLike, contentReference: string, ],
       [void],
       'nonpayable'
     >
-    
 
-    
+
+
     creatorArtefacts: TypedContractMethod<
       [arg0: AddressLike, arg1: BigNumberish, ],
       [string],
       'view'
     >
-    
 
-    
+
+
+    eligibilityRegistry: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+
+
+
     getArtefact: TypedContractMethod<
       [artefactId: BytesLike, ],
       [ArtefactStructOutput],
       'view'
     >
-    
 
-    
+
+
     getArtefactsByCreator: TypedContractMethod<
       [creator: AddressLike, ],
       [string[]],
       'view'
     >
-    
 
-    
+
+
     verifyArtefact: TypedContractMethod<
       [artefactId: BytesLike, snapshotCommitment: BytesLike, ],
       [boolean],
       'view'
     >
-    
+
 
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
@@ -150,6 +160,11 @@ getFunction(nameOrSignature: 'commitArtefact'): TypedContractMethod<
     >;
 getFunction(nameOrSignature: 'creatorArtefacts'): TypedContractMethod<
       [arg0: AddressLike, arg1: BigNumberish, ],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'eligibilityRegistry'): TypedContractMethod<
+      [],
       [string],
       'view'
     >;
@@ -173,13 +188,13 @@ getFunction(nameOrSignature: 'verifyArtefact'): TypedContractMethod<
 getEvent(key: 'ArtefactVerified'): TypedContractEvent<ArtefactVerifiedEvent.InputTuple, ArtefactVerifiedEvent.OutputTuple, ArtefactVerifiedEvent.OutputObject>;
 
     filters: {
-      
+
       'ArtefactCommitted(bytes32,address,bytes32)': TypedContractEvent<ArtefactCommittedEvent.InputTuple, ArtefactCommittedEvent.OutputTuple, ArtefactCommittedEvent.OutputObject>;
       ArtefactCommitted: TypedContractEvent<ArtefactCommittedEvent.InputTuple, ArtefactCommittedEvent.OutputTuple, ArtefactCommittedEvent.OutputObject>;
-    
+
 
       'ArtefactVerified(bytes32,uint8)': TypedContractEvent<ArtefactVerifiedEvent.InputTuple, ArtefactVerifiedEvent.OutputTuple, ArtefactVerifiedEvent.OutputObject>;
       ArtefactVerified: TypedContractEvent<ArtefactVerifiedEvent.InputTuple, ArtefactVerifiedEvent.OutputTuple, ArtefactVerifiedEvent.OutputObject>;
-    
+
     };
   }

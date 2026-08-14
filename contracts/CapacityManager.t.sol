@@ -19,12 +19,10 @@ contract CapacityManagerTest is Test {
         vm.startPrank(owner);
         eligibilityRegistry = new EligibilityRegistry();
         capacityManager = new CapacityManager(address(eligibilityRegistry));
-        
         eligibilityRegistry.setRegistrar(registrar);
         capacityManager.setAuthorizedCaller(vault, true);
         vm.stopPrank();
 
-        // Register eligibility
         vm.prank(registrar);
         eligibilityRegistry.registerEligibility(
             borrower,
@@ -33,25 +31,30 @@ contract CapacityManagerTest is Test {
             6500,
             block.timestamp + 30 days,
             1,
-            bytes32(0),
-            bytes32(0)
+            keccak256("evidence"),
+            keccak256("context")
         );
     }
 
     function test_AvailableCapacityIsMaxCredit() public view {
-        uint256 available = capacityManager.availableCapacity(borrower);
-        assertEq(available, 5000e18);
+        assertEq(capacityManager.availableCapacity(borrower), 5000e18);
     }
 
     function test_ReserveCapacityDecreasesAvailable() public {
         vm.prank(vault);
         capacityManager.reserveCapacity(borrower, 1000e18);
-        
-        uint256 available = capacityManager.availableCapacity(borrower);
-        assertEq(available, 4000e18);
-        
-        uint256 used = capacityManager.getUsedCapacity(borrower);
-        assertEq(used, 1000e18);
+        assertEq(capacityManager.availableCapacity(borrower), 4000e18);
+        assertEq(capacityManager.getUsedCapacity(borrower), 1000e18);
+    }
+
+    function test_DefaultedCapacityRemainsLocked() public {
+        vm.startPrank(vault);
+        capacityManager.reserveCapacity(borrower, 1000e18);
+        capacityManager.lockDefaultedCapacity(borrower, 1000e18);
+        vm.stopPrank();
+        assertEq(capacityManager.getUsedCapacity(borrower), 0);
+        assertEq(capacityManager.getDefaultedLockedCapacity(borrower), 1000e18);
+        assertEq(capacityManager.availableCapacity(borrower), 4000e18);
     }
 
     function test_CannotReserveMoreThanAvailable() public {

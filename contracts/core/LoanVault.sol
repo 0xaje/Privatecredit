@@ -14,34 +14,27 @@ contract LoanVault is Ownable, ReentrancyGuard, Pausable, ILoanVault {
     mapping(uint256 => Loan) public loans;
     uint256 public nextLoanId = 1;
 
-    ICapacityManager public capacityManager;
+    ICapacityManager public immutable capacityManager;
     IRepaymentRegistry public repaymentRegistry;
     address public marketplace;
 
     error Unauthorized();
     error TransferFailed();
+    error InvalidLoanTerms();
+    error LoanNotFound(uint256 loanId);
 
-    /**
-     * @notice Constructor for LoanVault
-     * @param _capacityManager Address of CapacityManager
-     */
     constructor(address _capacityManager) Ownable(msg.sender) {
+        require(_capacityManager != address(0), "zero capacity manager");
         capacityManager = ICapacityManager(_capacityManager);
     }
 
-    /**
-     * @notice Set marketplace address
-     * @param _marketplace The marketplace address
-     */
     function setMarketplace(address _marketplace) external onlyOwner {
+        require(_marketplace != address(0), "zero marketplace");
         marketplace = _marketplace;
     }
 
-    /**
-     * @notice Set repayment registry address
-     * @param _repaymentRegistry The repayment registry address
-     */
     function setRepaymentRegistry(address _repaymentRegistry) external onlyOwner {
+        require(_repaymentRegistry != address(0), "zero repayment registry");
         repaymentRegistry = IRepaymentRegistry(_repaymentRegistry);
     }
 
@@ -50,16 +43,6 @@ contract LoanVault is Ownable, ReentrancyGuard, Pausable, ILoanVault {
         _;
     }
 
-    /**
-     * @notice Originates a new loan
-     * @param borrower The borrower address
-     * @param lender The lender address
-     * @param principal The loan principal amount
-     * @param aprBps The APR in basis points
-     * @param duration The loan duration
-     * @param collateralAmount The collateral amount
-     * @return loanId The ID of the originated loan
-     */
     function originateLoan(
         address borrower,
         address lender,
@@ -68,8 +51,16 @@ contract LoanVault is Ownable, ReentrancyGuard, Pausable, ILoanVault {
         uint256 duration,
         uint256 collateralAmount
     ) external payable onlyMarketplace whenNotPaused returns (uint256 loanId) {
-        if (msg.value != principal + collateralAmount) revert Unauthorized();
-        
+        if (
+            borrower == address(0) ||
+            lender == address(0) ||
+            principal == 0 ||
+            duration == 0 ||
+            duration > PolicyConstants.MAX_LOAN_DURATION ||
+            aprBps > PolicyConstants.MAX_APR_BPS ||
+            msg.value != principal + collateralAmount
+        ) revert InvalidLoanTerms();
+
         capacityManager.reserveCapacity(borrower, principal);
 
         loanId = nextLoanId++;
@@ -90,60 +81,51 @@ contract LoanVault is Ownable, ReentrancyGuard, Pausable, ILoanVault {
         if (!success) revert TransferFailed();
 
         emit LoanOriginated(loanId, borrower, lender, principal);
-        return loanId;
     }
 
-    /**
-     * @notice Repays an active loan
-     * @param loanId The ID of the loan to repay
-     */
     function repayLoan(uint256 loanId) external payable nonReentrant whenNotPaused {
         Loan storage loan = loans[loanId];
+        if (loan.borrower == address(0)) revert LoanNotFound(loanId);
         if (loan.borrower != msg.sender) revert NotBorrower(msg.sender, loanId);
         if (loan.status != LoanStatus.ACTIVE) revert LoanNotActive(loanId);
 
         uint256 totalOwed = calculateTotalOwed(loanId);
         if (msg.value < totalOwed) revert InsufficientRepayment(loanId, msg.value, totalOwed);
+        uint256 excess = msg.value - totalOwed;
 
-        loan.repaidAmount += msg.value;
+        loan.repaidAmount = totalOwed;
         loan.status = LoanStatus.REPAID;
-
         capacityManager.releaseCapacity(loan.borrower, loan.principal);
 
-        (bool success, ) = loan.borrower.call{value: loan.collateralAmount}("");
-        if (!success) revert TransferFailed();
-
-        (bool successLender, ) = loan.lender.call{value: msg.value}("");
-        if (!successLender) revert TransferFailed();
-
-        RepaymentOutcome outcome = block.timestamp <= loan.startTime + loan.duration 
-            ? RepaymentOutcome.ON_TIME 
-            : RepaymentOutcome.LATE;
-
-        if (address(repaymentRegistry) != address(0)) {
-            repaymentRegistry.recordRepayment(loanId, loan.borrower, msg.value, outcome);
+        (bool collateralReturned, ) = loan.borrower.call{value: loan.collateralAmount}("");
+        if (!collateralReturned) revert TransferFailed();
+        (bool lenderPaid, ) = loan.lender.call{value: totalOwed}("");
+        if (!lenderPaid) revert TransferFailed();
+        if (excess > 0) {
+            (bool excessReturned, ) = loan.borrower.call{value: excess}("");
+            if (!excessReturned) revert TransferFailed();
         }
 
-        emit LoanRepaid(loanId, msg.value);
+        RepaymentOutcome outcome = block.timestamp <= loan.startTime + loan.duration
+            ? RepaymentOutcome.ON_TIME
+            : RepaymentOutcome.LATE;
+        if (address(repaymentRegistry) != address(0)) {
+            repaymentRegistry.recordRepayment(loanId, loan.borrower, totalOwed, outcome);
+        }
+        emit LoanRepaid(loanId, totalOwed);
     }
 
-    /**
-     * @notice Declares a loan as defaulted
-     * @param loanId The ID of the loan
-     */
     function declareDefault(uint256 loanId) external nonReentrant whenNotPaused {
         Loan storage loan = loans[loanId];
+        if (loan.borrower == address(0)) revert LoanNotFound(loanId);
         if (loan.status != LoanStatus.ACTIVE) revert LoanNotActive(loanId);
         if (block.timestamp <= loan.startTime + loan.duration) revert LoanNotExpired(loanId);
 
         loan.status = LoanStatus.DEFAULTED;
+        capacityManager.lockDefaultedCapacity(loan.borrower, loan.principal);
 
-        // Release reserved capacity so the borrower isn't permanently locked out
-        capacityManager.releaseCapacity(loan.borrower, loan.principal);
-
-        (bool success, ) = loan.lender.call{value: loan.collateralAmount}("");
-        if (!success) revert TransferFailed();
-
+        (bool collateralSeized, ) = loan.lender.call{value: loan.collateralAmount}("");
+        if (!collateralSeized) revert TransferFailed();
         if (address(repaymentRegistry) != address(0)) {
             repaymentRegistry.recordRepayment(loanId, loan.borrower, 0, RepaymentOutcome.DEFAULT);
         }
@@ -152,33 +134,21 @@ contract LoanVault is Ownable, ReentrancyGuard, Pausable, ILoanVault {
         emit CollateralSeized(loanId, loan.lender, loan.collateralAmount);
     }
 
-    /**
-     * @notice Retrieves loan details
-     * @param loanId The ID of the loan
-     * @return The Loan struct
-     */
     function getLoan(uint256 loanId) external view returns (Loan memory) {
         return loans[loanId];
     }
 
-    /**
-     * @notice Calculates the interest owed on a loan
-     * @param loanId The ID of the loan
-     * @return The calculated interest
-     */
     function calculateInterest(uint256 loanId) public view returns (uint256) {
         Loan storage loan = loans[loanId];
+        if (loan.borrower == address(0)) return 0;
         uint256 elapsed = block.timestamp - loan.startTime;
         return (loan.principal * loan.aprBps * elapsed) / (PolicyConstants.BPS_DENOMINATOR * 365 days);
     }
 
-    /**
-     * @notice Calculates the total amount owed (principal + interest - repaid)
-     * @param loanId The ID of the loan
-     * @return The total amount owed
-     */
     function calculateTotalOwed(uint256 loanId) public view returns (uint256) {
         Loan storage loan = loans[loanId];
-        return loan.principal + calculateInterest(loanId) - loan.repaidAmount;
+        if (loan.borrower == address(0)) return 0;
+        uint256 grossOwed = loan.principal + calculateInterest(loanId);
+        return loan.repaidAmount >= grossOwed ? 0 : grossOwed - loan.repaidAmount;
     }
 }

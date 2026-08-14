@@ -27,6 +27,7 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
     error TransferFailed();
     error NotBorrower();
     error InsufficientCollateral(uint256 required, uint256 provided);
+    error BorrowerCannotLend();
 
     /**
      * @notice Constructor for LoanMarketplace
@@ -66,6 +67,7 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
         uint256 maxDuration,
         uint256 collateralAmount
     ) external whenNotPaused returns (uint256) {
+        if (amount == 0 || maxAprBps > PolicyConstants.MAX_APR_BPS || maxDuration == 0 || maxDuration > PolicyConstants.MAX_LOAN_DURATION) revert TermsOutOfBounds();
         if (!eligibilityRegistry.isEligibilityValid(msg.sender)) revert InsufficientEligibility(msg.sender);
         if (!capacityManager.canBorrow(msg.sender, amount)) revert InsufficientEligibility(msg.sender);
 
@@ -113,8 +115,9 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
         uint256 requiredCollateral
     ) external payable whenNotPaused returns (uint256) {
         BorrowRequest memory req = requests[requestId];
+        if (msg.sender == req.borrower) revert BorrowerCannotLend();
         if (req.status != RequestStatus.OPEN) revert RequestNotOpen(requestId);
-        if (aprBps > req.maxAprBps || duration > req.maxDuration) revert TermsOutOfBounds();
+        if (aprBps > req.maxAprBps || duration == 0 || duration > req.maxDuration || aprBps > PolicyConstants.MAX_APR_BPS) revert TermsOutOfBounds();
         if (msg.value != req.amount) revert TermsOutOfBounds();
 
         uint256 offerId = nextOfferId++;

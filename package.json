@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:contracts": "hardhat test test/Integration.ts",
     "deploy:local": "hardhat ignition deploy ignition/modules/PrivateCredit.ts --network localhost",
     "deploy:testnet": "hardhat ignition deploy ignition/modules/PrivateCredit.ts --network creditcoinTestnet"
   },
@@ -31,6 +33,7 @@
     "typescript": "~6.0.3"
   },
   "dependencies": {
+    "@gluwa/usc-contracts": "^0.1.2",
     "@openzeppelin/contracts": "^5.6.1"
   }
 }

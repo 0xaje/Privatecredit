@@ -1,0 +1,20 @@
+{
+  "network": "creditcoinTestnet",
+  "chainId": 102031,
+  "rpcUrl": "https://rpc.cc3-testnet.creditcoin.network",
+  "explorerUrl": "https://creditcoin.blockscout.com",
+  "contracts": {
+    "artefactRegistry": "0x1D70b72Ad254535624F1f83d3DAf845416777B2F",
+    "eligibilityRegistry": "0x71777Ef0194E36C0eE5d17432D029ED052cBcAE2",
+    "repaymentRegistry": "0x501FeEc3DB2Cbc612FD76E9E687Bf414d84884EC",
+    "capacityManager": "0x4f55B2668e74d7AB350b7d105aAc8b914B9aEDBc",
+    "loanVault": "0x2773338984c5036374E02496848335C24cBd975b",
+    "loanMarketplace": "0x776645cD81Ab903c573De406615A2f4c429ca9cc",
+    "uscVerifier": ""
+  },
+  "attestcoin": {
+    "blockProverPrecompile": "0x0000000000000000000000000000000000000FD2",
+    "chainInfoPrecompile": "0x0000000000000000000000000000000000000fd3",
+    "proofBuilderUrl": "https://proof-gen-api.cc3-testnet.creditcoin.network/"
+  }
+}

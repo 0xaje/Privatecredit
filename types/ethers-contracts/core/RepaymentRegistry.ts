@@ -3,11 +3,11 @@
 /* eslint-disable */
 import type { BaseContract, BigNumberish, BytesLike, FunctionFragment, Result, Interface, EventFragment, AddressLike, ContractRunner, ContractMethod, Listener } from "ethers"
 import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, TypedLogDescription, TypedListener, TypedContractMethod } from "../common.js"
-  
+
     export type RepaymentRecordStruct = {loanId: BigNumberish, borrower: AddressLike, amount: BigNumberish, timestamp: BigNumberish, outcome: BigNumberish}
 
     export type RepaymentRecordStructOutput = [loanId: bigint, borrower: string, amount: bigint, timestamp: bigint, outcome: bigint] & {loanId: bigint, borrower: string, amount: bigint, timestamp: bigint, outcome: bigint }
-  
+
 
   export interface RepaymentRegistryInterface extends Interface {
     getFunction(nameOrSignature: "authorizedRecorder" | "borrowerRepayments" | "getBorrowerRepaymentCount" | "getBorrowerRepayments" | "getRepayment" | "owner" | "recordRepayment" | "records" | "renounceOwnership" | "setAuthorizedRecorder" | "transferOwnership"): FunctionFragment;
@@ -39,7 +39,7 @@ decodeFunctionResult(functionFragment: 'setAuthorizedRecorder', data: BytesLike)
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
   }
 
-  
+
     export namespace OwnershipTransferredEvent {
       export type InputTuple = [previousOwner: AddressLike, newOwner: AddressLike];
       export type OutputTuple = [previousOwner: string, newOwner: string];
@@ -50,7 +50,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
       export type LogDescription = TypedLogDescription<Event>
     }
 
-  
+
 
     export namespace RepaymentRecordedEvent {
       export type InputTuple = [loanId: BigNumberish, borrower: AddressLike, amount: BigNumberish, outcome: BigNumberish];
@@ -62,16 +62,16 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
       export type LogDescription = TypedLogDescription<Event>
     }
 
-  
+
 
   export interface RepaymentRegistry extends BaseContract {
-    
+
     connect(runner?: ContractRunner | null): RepaymentRegistry;
     waitForDeployment(): Promise<this>;
 
     interface: RepaymentRegistryInterface;
 
-    
+
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
@@ -85,7 +85,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 
   on<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   on<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
-  
+
   once<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   once<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
 
@@ -96,94 +96,94 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
   removeAllListeners<TCEvent extends TypedContractEvent>(event?: TCEvent): Promise<this>
 
 
-    
-    
+
+
     authorizedRecorder: TypedContractMethod<
       [],
       [string],
       'view'
     >
-    
 
-    
+
+
     borrowerRepayments: TypedContractMethod<
       [arg0: AddressLike, arg1: BigNumberish, ],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     getBorrowerRepaymentCount: TypedContractMethod<
       [borrower: AddressLike, ],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     getBorrowerRepayments: TypedContractMethod<
       [borrower: AddressLike, ],
       [bigint[]],
       'view'
     >
-    
 
-    
+
+
     getRepayment: TypedContractMethod<
       [loanId: BigNumberish, ],
       [RepaymentRecordStructOutput],
       'view'
     >
-    
 
-    
+
+
     owner: TypedContractMethod<
       [],
       [string],
       'view'
     >
-    
 
-    
+
+
     recordRepayment: TypedContractMethod<
       [loanId: BigNumberish, borrower: AddressLike, amount: BigNumberish, outcome: BigNumberish, ],
       [void],
       'nonpayable'
     >
-    
 
-    
+
+
     records: TypedContractMethod<
       [arg0: BigNumberish, ],
       [[bigint, string, bigint, bigint, bigint] & {loanId: bigint, borrower: string, amount: bigint, timestamp: bigint, outcome: bigint }],
       'view'
     >
-    
 
-    
+
+
     renounceOwnership: TypedContractMethod<
       [],
       [void],
       'nonpayable'
     >
-    
 
-    
+
+
     setAuthorizedRecorder: TypedContractMethod<
       [_recorder: AddressLike, ],
       [void],
       'nonpayable'
     >
-    
 
-    
+
+
     transferOwnership: TypedContractMethod<
       [newOwner: AddressLike, ],
       [void],
       'nonpayable'
     >
-    
+
 
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
@@ -248,13 +248,13 @@ getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<
 getEvent(key: 'RepaymentRecorded'): TypedContractEvent<RepaymentRecordedEvent.InputTuple, RepaymentRecordedEvent.OutputTuple, RepaymentRecordedEvent.OutputObject>;
 
     filters: {
-      
+
       'OwnershipTransferred(address,address)': TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
       OwnershipTransferred: TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
-    
+
 
       'RepaymentRecorded(uint256,address,uint256,uint8)': TypedContractEvent<RepaymentRecordedEvent.InputTuple, RepaymentRecordedEvent.OutputTuple, RepaymentRecordedEvent.OutputObject>;
       RepaymentRecorded: TypedContractEvent<RepaymentRecordedEvent.InputTuple, RepaymentRecordedEvent.OutputTuple, RepaymentRecordedEvent.OutputObject>;
-    
+
     };
   }

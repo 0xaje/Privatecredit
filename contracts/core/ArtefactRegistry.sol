@@ -3,28 +3,42 @@ pragma solidity ^0.8.20;
 
 import "../libraries/CreditTypes.sol";
 import "../interfaces/IArtefactRegistry.sol";
+import "../interfaces/IEligibilityRegistry.sol";
 
 contract ArtefactRegistry is IArtefactRegistry {
     mapping(bytes32 => Artefact) public artefacts;
     mapping(address => bytes32[]) public creatorArtefacts;
+    IEligibilityRegistry public immutable eligibilityRegistry;
 
+    error InvalidArtefact();
+    error EligibilityNonceMismatch(uint256 expected, uint256 provided);
+    error EligibilityRequired();
 
+    constructor(address _eligibilityRegistry) {
+        require(_eligibilityRegistry != address(0), "zero eligibility registry");
+        eligibilityRegistry = IEligibilityRegistry(_eligibilityRegistry);
+    }
 
-    /**
-     * @notice Commits a new artefact
-     * @param snapshotCommitment The snapshot commitment
-     * @param eligibilityNonce The eligibility nonce
-     * @param policyReference The policy reference
-     * @param contentReference The content reference string
-     */
     function commitArtefact(
         bytes32 snapshotCommitment,
         uint256 eligibilityNonce,
         bytes32 policyReference,
         string calldata contentReference
     ) external {
-        bytes32 artefactId = keccak256(abi.encodePacked(msg.sender, snapshotCommitment, block.timestamp));
-        
+        if (snapshotCommitment == bytes32(0) || policyReference == bytes32(0) || bytes(contentReference).length == 0) {
+            revert InvalidArtefact();
+        }
+        Eligibility memory eligibility = eligibilityRegistry.getEligibility(msg.sender);
+        if (!eligibility.active || block.timestamp >= eligibility.validUntil) revert EligibilityRequired();
+        if (eligibility.nonce != eligibilityNonce) revert EligibilityNonceMismatch(eligibility.nonce, eligibilityNonce);
+
+        bytes32 artefactId = keccak256(abi.encode(
+            msg.sender,
+            snapshotCommitment,
+            eligibilityNonce,
+            policyReference,
+            contentReference
+        ));
         if (artefacts[artefactId].timestamp != 0) revert ArtefactAlreadyExists();
 
         artefacts[artefactId] = Artefact({
@@ -36,36 +50,18 @@ contract ArtefactRegistry is IArtefactRegistry {
             timestamp: block.timestamp,
             contentReference: contentReference
         });
-
         creatorArtefacts[msg.sender].push(artefactId);
-        
         emit ArtefactCommitted(artefactId, msg.sender, snapshotCommitment);
     }
 
-    /**
-     * @notice Retrieves an artefact by its ID
-     * @param artefactId The ID of the artefact
-     * @return The Artefact struct
-     */
     function getArtefact(bytes32 artefactId) external view returns (Artefact memory) {
         return artefacts[artefactId];
     }
 
-    /**
-     * @notice Verifies if a snapshot commitment matches the artefact's
-     * @param artefactId The ID of the artefact
-     * @param snapshotCommitment The commitment to verify
-     * @return True if matches, false otherwise
-     */
     function verifyArtefact(bytes32 artefactId, bytes32 snapshotCommitment) external view returns (bool) {
         return artefacts[artefactId].snapshotCommitment == snapshotCommitment;
     }
 
-    /**
-     * @notice Retrieves all artefacts created by a specific address
-     * @param creator The creator's address
-     * @return Array of artefact IDs
-     */
     function getArtefactsByCreator(address creator) external view returns (bytes32[] memory) {
         return creatorArtefacts[creator];
     }

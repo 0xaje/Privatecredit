@@ -13,6 +13,11 @@
   },
   {
     "inputs": [],
+    "name": "InvalidCapacityRelease",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "InvalidEligibility",
     "type": "error"
   },
@@ -57,6 +62,25 @@
       }
     ],
     "name": "CapacityReserved",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "DefaultCapacityLocked",
     "type": "event"
   },
   {
@@ -110,6 +134,44 @@
         "type": "address"
       }
     ],
+    "name": "getDefaultedLockedCapacity",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      }
+    ],
+    "name": "getTotalConsumedCapacity",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      }
+    ],
     "name": "getUsedCapacity",
     "outputs": [
       {
@@ -119,6 +181,24 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "lockDefaultedCapacity",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -168,4 +248,3 @@
       return new Contract(address, _abi, runner) as unknown as ICapacityManager;
     }
   }
-  

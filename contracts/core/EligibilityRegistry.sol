@@ -12,13 +12,13 @@ contract EligibilityRegistry is Ownable, Pausable, IEligibilityRegistry {
     mapping(address => uint256) public nonces;
     address public registrar;
 
+    error InvalidPolicy();
+    error ZeroBorrower();
+
     constructor() Ownable(msg.sender) {}
 
-    /**
-     * @notice Sets the registrar address
-     * @param _registrar The new registrar address
-     */
     function setRegistrar(address _registrar) external onlyOwner {
+        require(_registrar != address(0), "zero registrar");
         registrar = _registrar;
     }
 
@@ -27,17 +27,6 @@ contract EligibilityRegistry is Ownable, Pausable, IEligibilityRegistry {
         _;
     }
 
-    /**
-     * @notice Registers a new eligibility for a borrower
-     * @param borrower The borrower address
-     * @param riskTier The risk tier assigned
-     * @param maxActiveCredit The max credit available
-     * @param maxLtvBps The max LTV in basis points
-     * @param validUntil The validity expiration timestamp
-     * @param policyVersion The policy version
-     * @param evidenceCommitment The evidence commitment
-     * @param attestcoinContext The attestcoin context
-     */
     function registerEligibility(
         address borrower,
         RiskTier riskTier,
@@ -48,8 +37,21 @@ contract EligibilityRegistry is Ownable, Pausable, IEligibilityRegistry {
         bytes32 evidenceCommitment,
         bytes32 attestcoinContext
     ) external onlyRegistrar whenNotPaused {
+        if (borrower == address(0)) revert ZeroBorrower();
+        if (maxActiveCredit == 0 || maxLtvBps > PolicyConstants.BPS_DENOMINATOR || validUntil <= block.timestamp) revert InvalidPolicy();
+        if (policyVersion == 0 || evidenceCommitment == bytes32(0) || attestcoinContext == bytes32(0)) revert InvalidPolicy();
+
+        if (riskTier == RiskTier.LOW) {
+            if (maxActiveCredit > PolicyConstants.LOW_RISK_MAX_CREDIT || maxLtvBps > PolicyConstants.LOW_RISK_MAX_LTV_BPS) revert InvalidPolicy();
+        } else if (riskTier == RiskTier.MEDIUM) {
+            if (maxActiveCredit > PolicyConstants.MEDIUM_RISK_MAX_CREDIT || maxLtvBps > PolicyConstants.MEDIUM_RISK_MAX_LTV_BPS) revert InvalidPolicy();
+        } else if (riskTier == RiskTier.HIGH) {
+            if (maxActiveCredit > PolicyConstants.HIGH_RISK_MAX_CREDIT || maxLtvBps > PolicyConstants.HIGH_RISK_MAX_LTV_BPS) revert InvalidPolicy();
+        } else {
+            revert InvalidPolicy();
+        }
+
         uint256 nonce = ++nonces[borrower];
-        
         eligibilities[borrower] = Eligibility({
             borrower: borrower,
             riskTier: riskTier,
@@ -62,45 +64,24 @@ contract EligibilityRegistry is Ownable, Pausable, IEligibilityRegistry {
             nonce: nonce,
             active: true
         });
-
         emit EligibilityRegistered(borrower, nonce);
     }
 
-    /**
-     * @notice Revokes an active eligibility
-     * @param borrower The borrower address
-     */
     function revokeEligibility(address borrower) external {
         if (msg.sender != registrar && msg.sender != owner()) revert UnauthorizedRegistrar();
-        
         eligibilities[borrower].active = false;
         emit EligibilityRevoked(borrower, eligibilities[borrower].nonce);
     }
 
-    /**
-     * @notice Retrieves the eligibility data for a borrower
-     * @param borrower The borrower address
-     * @return The Eligibility struct
-     */
     function getEligibility(address borrower) external view returns (Eligibility memory) {
         return eligibilities[borrower];
     }
 
-    /**
-     * @notice Checks if the eligibility for a borrower is valid
-     * @param borrower The borrower address
-     * @return True if valid, false otherwise
-     */
     function isEligibilityValid(address borrower) external view returns (bool) {
         Eligibility storage e = eligibilities[borrower];
         return e.active && block.timestamp < e.validUntil;
     }
 
-    /**
-     * @notice Retrieves the current eligibility nonce for a borrower
-     * @param borrower The borrower address
-     * @return The nonce
-     */
     function getEligibilityNonce(address borrower) external view returns (uint256) {
         return nonces[borrower];
     }

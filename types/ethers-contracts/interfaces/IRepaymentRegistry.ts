@@ -3,11 +3,11 @@
 /* eslint-disable */
 import type { BaseContract, BigNumberish, BytesLike, FunctionFragment, Result, Interface, EventFragment, AddressLike, ContractRunner, ContractMethod, Listener } from "ethers"
 import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, TypedLogDescription, TypedListener, TypedContractMethod } from "../common.js"
-  
+
     export type RepaymentRecordStruct = {loanId: BigNumberish, borrower: AddressLike, amount: BigNumberish, timestamp: BigNumberish, outcome: BigNumberish}
 
     export type RepaymentRecordStructOutput = [loanId: bigint, borrower: string, amount: bigint, timestamp: bigint, outcome: bigint] & {loanId: bigint, borrower: string, amount: bigint, timestamp: bigint, outcome: bigint }
-  
+
 
   export interface IRepaymentRegistryInterface extends Interface {
     getFunction(nameOrSignature: "getBorrowerRepaymentCount" | "getBorrowerRepayments" | "getRepayment" | "recordRepayment"): FunctionFragment;
@@ -25,7 +25,7 @@ decodeFunctionResult(functionFragment: 'getRepayment', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'recordRepayment', data: BytesLike): Result;
   }
 
-  
+
     export namespace RepaymentRecordedEvent {
       export type InputTuple = [loanId: BigNumberish, borrower: AddressLike, amount: BigNumberish, outcome: BigNumberish];
       export type OutputTuple = [loanId: bigint, borrower: string, amount: bigint, outcome: bigint];
@@ -36,16 +36,16 @@ decodeFunctionResult(functionFragment: 'recordRepayment', data: BytesLike): Resu
       export type LogDescription = TypedLogDescription<Event>
     }
 
-  
+
 
   export interface IRepaymentRegistry extends BaseContract {
-    
+
     connect(runner?: ContractRunner | null): IRepaymentRegistry;
     waitForDeployment(): Promise<this>;
 
     interface: IRepaymentRegistryInterface;
 
-    
+
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
@@ -59,7 +59,7 @@ decodeFunctionResult(functionFragment: 'recordRepayment', data: BytesLike): Resu
 
   on<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   on<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
-  
+
   once<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   once<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
 
@@ -70,38 +70,38 @@ decodeFunctionResult(functionFragment: 'recordRepayment', data: BytesLike): Resu
   removeAllListeners<TCEvent extends TypedContractEvent>(event?: TCEvent): Promise<this>
 
 
-    
-    
+
+
     getBorrowerRepaymentCount: TypedContractMethod<
       [borrower: AddressLike, ],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     getBorrowerRepayments: TypedContractMethod<
       [borrower: AddressLike, ],
       [bigint[]],
       'view'
     >
-    
 
-    
+
+
     getRepayment: TypedContractMethod<
       [loanId: BigNumberish, ],
       [RepaymentRecordStructOutput],
       'view'
     >
-    
 
-    
+
+
     recordRepayment: TypedContractMethod<
       [loanId: BigNumberish, borrower: AddressLike, amount: BigNumberish, outcome: BigNumberish, ],
       [void],
       'nonpayable'
     >
-    
+
 
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
@@ -130,9 +130,9 @@ getFunction(nameOrSignature: 'recordRepayment'): TypedContractMethod<
     getEvent(key: 'RepaymentRecorded'): TypedContractEvent<RepaymentRecordedEvent.InputTuple, RepaymentRecordedEvent.OutputTuple, RepaymentRecordedEvent.OutputObject>;
 
     filters: {
-      
+
       'RepaymentRecorded(uint256,address,uint256,uint8)': TypedContractEvent<RepaymentRecordedEvent.InputTuple, RepaymentRecordedEvent.OutputTuple, RepaymentRecordedEvent.OutputObject>;
       RepaymentRecorded: TypedContractEvent<RepaymentRecordedEvent.InputTuple, RepaymentRecordedEvent.OutputTuple, RepaymentRecordedEvent.OutputObject>;
-    
+
     };
   }

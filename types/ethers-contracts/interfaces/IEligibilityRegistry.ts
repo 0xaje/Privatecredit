@@ -3,11 +3,11 @@
 /* eslint-disable */
 import type { BaseContract, BigNumberish, BytesLike, FunctionFragment, Result, Interface, EventFragment, AddressLike, ContractRunner, ContractMethod, Listener } from "ethers"
 import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, TypedLogDescription, TypedListener, TypedContractMethod } from "../common.js"
-  
+
     export type EligibilityStruct = {borrower: AddressLike, riskTier: BigNumberish, maxActiveCredit: BigNumberish, maxLtvBps: BigNumberish, validUntil: BigNumberish, policyVersion: BigNumberish, evidenceCommitment: BytesLike, attestcoinContext: BytesLike, nonce: BigNumberish, active: boolean}
 
     export type EligibilityStructOutput = [borrower: string, riskTier: bigint, maxActiveCredit: bigint, maxLtvBps: bigint, validUntil: bigint, policyVersion: bigint, evidenceCommitment: string, attestcoinContext: string, nonce: bigint, active: boolean] & {borrower: string, riskTier: bigint, maxActiveCredit: bigint, maxLtvBps: bigint, validUntil: bigint, policyVersion: bigint, evidenceCommitment: string, attestcoinContext: string, nonce: bigint, active: boolean }
-  
+
 
   export interface IEligibilityRegistryInterface extends Interface {
     getFunction(nameOrSignature: "getEligibility" | "getEligibilityNonce" | "isEligibilityValid" | "registerEligibility" | "revokeEligibility"): FunctionFragment;
@@ -27,7 +27,7 @@ decodeFunctionResult(functionFragment: 'registerEligibility', data: BytesLike): 
 decodeFunctionResult(functionFragment: 'revokeEligibility', data: BytesLike): Result;
   }
 
-  
+
     export namespace EligibilityExpiredEvent {
       export type InputTuple = [borrower: AddressLike, nonce: BigNumberish];
       export type OutputTuple = [borrower: string, nonce: bigint];
@@ -38,7 +38,7 @@ decodeFunctionResult(functionFragment: 'revokeEligibility', data: BytesLike): Re
       export type LogDescription = TypedLogDescription<Event>
     }
 
-  
+
 
     export namespace EligibilityRegisteredEvent {
       export type InputTuple = [borrower: AddressLike, nonce: BigNumberish];
@@ -50,7 +50,7 @@ decodeFunctionResult(functionFragment: 'revokeEligibility', data: BytesLike): Re
       export type LogDescription = TypedLogDescription<Event>
     }
 
-  
+
 
     export namespace EligibilityRevokedEvent {
       export type InputTuple = [borrower: AddressLike, nonce: BigNumberish];
@@ -62,16 +62,16 @@ decodeFunctionResult(functionFragment: 'revokeEligibility', data: BytesLike): Re
       export type LogDescription = TypedLogDescription<Event>
     }
 
-  
+
 
   export interface IEligibilityRegistry extends BaseContract {
-    
+
     connect(runner?: ContractRunner | null): IEligibilityRegistry;
     waitForDeployment(): Promise<this>;
 
     interface: IEligibilityRegistryInterface;
 
-    
+
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
@@ -85,7 +85,7 @@ decodeFunctionResult(functionFragment: 'revokeEligibility', data: BytesLike): Re
 
   on<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   on<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
-  
+
   once<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   once<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
 
@@ -96,46 +96,46 @@ decodeFunctionResult(functionFragment: 'revokeEligibility', data: BytesLike): Re
   removeAllListeners<TCEvent extends TypedContractEvent>(event?: TCEvent): Promise<this>
 
 
-    
-    
+
+
     getEligibility: TypedContractMethod<
       [borrower: AddressLike, ],
       [EligibilityStructOutput],
       'view'
     >
-    
 
-    
+
+
     getEligibilityNonce: TypedContractMethod<
       [borrower: AddressLike, ],
       [bigint],
       'view'
     >
-    
 
-    
+
+
     isEligibilityValid: TypedContractMethod<
       [borrower: AddressLike, ],
       [boolean],
       'view'
     >
-    
 
-    
+
+
     registerEligibility: TypedContractMethod<
       [borrower: AddressLike, riskTier: BigNumberish, maxActiveCredit: BigNumberish, maxLtvBps: BigNumberish, validUntil: BigNumberish, policyVersion: BigNumberish, evidenceCommitment: BytesLike, attestcoinContext: BytesLike, ],
       [void],
       'nonpayable'
     >
-    
 
-    
+
+
     revokeEligibility: TypedContractMethod<
       [borrower: AddressLike, ],
       [void],
       'nonpayable'
     >
-    
+
 
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
@@ -171,17 +171,17 @@ getEvent(key: 'EligibilityRegistered'): TypedContractEvent<EligibilityRegistered
 getEvent(key: 'EligibilityRevoked'): TypedContractEvent<EligibilityRevokedEvent.InputTuple, EligibilityRevokedEvent.OutputTuple, EligibilityRevokedEvent.OutputObject>;
 
     filters: {
-      
+
       'EligibilityExpired(address,uint256)': TypedContractEvent<EligibilityExpiredEvent.InputTuple, EligibilityExpiredEvent.OutputTuple, EligibilityExpiredEvent.OutputObject>;
       EligibilityExpired: TypedContractEvent<EligibilityExpiredEvent.InputTuple, EligibilityExpiredEvent.OutputTuple, EligibilityExpiredEvent.OutputObject>;
-    
+
 
       'EligibilityRegistered(address,uint256)': TypedContractEvent<EligibilityRegisteredEvent.InputTuple, EligibilityRegisteredEvent.OutputTuple, EligibilityRegisteredEvent.OutputObject>;
       EligibilityRegistered: TypedContractEvent<EligibilityRegisteredEvent.InputTuple, EligibilityRegisteredEvent.OutputTuple, EligibilityRegisteredEvent.OutputObject>;
-    
+
 
       'EligibilityRevoked(address,uint256)': TypedContractEvent<EligibilityRevokedEvent.InputTuple, EligibilityRevokedEvent.OutputTuple, EligibilityRevokedEvent.OutputObject>;
       EligibilityRevoked: TypedContractEvent<EligibilityRevokedEvent.InputTuple, EligibilityRevokedEvent.OutputTuple, EligibilityRevokedEvent.OutputObject>;
-    
+
     };
   }
