@@ -7,17 +7,13 @@ const deployerKey = process.env.DEPLOYER_PRIVATE_KEY;
 export default defineConfig({
   plugins: [hardhatToolboxMochaEthersPlugin],
   solidity: {
-    profiles: {
-      default: {
-        version: "0.8.23",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
-          viaIR: true,
-        },
+    version: "0.8.23",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
       },
+      viaIR: true,
     },
   },
   networks: {
