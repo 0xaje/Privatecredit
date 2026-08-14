@@ -17,11 +17,15 @@ export default buildModule("PrivateCreditModule", (m) => {
     libraries: { EvmV1Decoder: evmV1Decoder },
   });
 
-  m.call(capacityManager, "setAuthorizedCaller", [loanVault, true]);
+  m.call(capacityManager, "setAuthorizedCaller", [loanVault, true], {
+    id: "CapacityManagerAuthorizeLoanVault",
+  });
   m.call(loanVault, "setMarketplace", [loanMarketplace]);
   m.call(loanVault, "setRepaymentRegistry", [repaymentRegistry]);
   m.call(repaymentRegistry, "setAuthorizedRecorder", [loanVault]);
-  m.call(capacityManager, "setAuthorizedCaller", [loanMarketplace, true]);
+  m.call(capacityManager, "setAuthorizedCaller", [loanMarketplace, true], {
+    id: "CapacityManagerAuthorizeLoanMarketplace",
+  });
   m.call(eligibilityRegistry, "setRegistrar", [uscVerifier]);
 
   return {

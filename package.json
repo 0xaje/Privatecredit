@@ -7,6 +7,7 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "test:contracts": "hardhat test test/Integration.ts",
+    "validate:ignition": "hardhat --build-profile production ignition deploy ignition/modules/PrivateCredit.ts --network hardhatMainnet --deployment-id ignition-validation",
     "deploy:local": "hardhat ignition deploy ignition/modules/PrivateCredit.ts --network localhost",
     "deploy:testnet": "node scripts/deploy-testnet.mjs"
   },

@@ -33,6 +33,8 @@ console.log(`Deployment preflight passed: creditcoinTestnet chain ${network.chai
 
 const hardhatArgs = [
   'hardhat',
+  '--build-profile',
+  'production',
   'ignition',
   'deploy',
   'ignition/modules/PrivateCredit.ts',
