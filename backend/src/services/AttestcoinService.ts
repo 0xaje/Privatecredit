@@ -1,5 +1,7 @@
 import { ethers } from 'ethers';
 import { blockProver, proofProvider } from '@gluwa/usc-sdk';
+import type { ContinuityResponse } from '@gluwa/usc-sdk/dist/proof-provider';
+import type { MerkleProofEntry } from '@gluwa/usc-sdk/dist/proof-provider/merkle';
 import { config } from '../config';
 import { evidenceNormalizer, CreditFeature } from './EvidenceNormalizer';
 
@@ -22,17 +24,54 @@ export interface VerificationRequest {
   status: VerificationStatus;
   createdAt: number;
   sourceBlock?: number;
-  proof?: any;
+  proof?: ContinuityResponse;
   creditcoinTxHash?: string;
   evidenceId?: string;
   error?: string;
   feature?: CreditFeature;
 }
 
+export interface PreparedVerification {
+  to: string;
+  data: string;
+  value: 0;
+  requestId: string;
+  borrower: string;
+  sourceTxHash: string;
+  chainId: number;
+  chainKey: number;
+  blockHeight: number;
+}
+
 const USC_VERIFIER_ABI = [
+  'function verifyEvidence(uint8 evidenceType,address borrower,uint64 chainKey,uint64 blockHeight,bytes encodedTransaction,bytes32 merkleRoot,tuple(bytes32 hash,bool isLeft)[] siblings,bytes32 lowerEndpointDigest,bytes32[] continuityRoots)',
   'function verifiedEvidence(bytes32 evidenceId) external view returns (tuple(address borrower,uint8 evidenceType,uint64 chainKey,uint64 blockHeight,address token,address sender,uint256 amount,bytes32 transactionHash,bool active))',
   'event EvidenceVerified(bytes32 indexed queryId,bytes32 indexed evidenceId,address indexed borrower,uint64 chainKey,uint64 blockHeight,address token,address sender,uint256 amount,uint8 evidenceType,bytes32 transactionHash)',
 ];
+
+const verifierInterface = new ethers.Interface(USC_VERIFIER_ABI);
+
+function requireBytes32(value: unknown, label: string): string {
+  if (typeof value !== 'string' || !ethers.isHexString(value, 32)) {
+    throw new Error(`${label} must be a 32-byte hex value`);
+  }
+  return value;
+}
+
+function requireEncodedBytes(value: unknown, label: string): string {
+  if (typeof value !== 'string' || !ethers.isHexString(value) || value === '0x') {
+    throw new Error(`${label} must be non-empty encoded transaction bytes`);
+  }
+  return value;
+}
+
+function requireSafeUint(value: unknown, label: string): number {
+  const numberValue = Number(value);
+  if (!Number.isSafeInteger(numberValue) || numberValue < 0) {
+    throw new Error(`${label} must be a non-negative safe integer`);
+  }
+  return numberValue;
+}
 
 export class AttestcoinService {
   private readonly requests = new Map<string, VerificationRequest>();
@@ -89,8 +128,96 @@ export class AttestcoinService {
     return this.get(requestId);
   }
 
+  prepareVerification(requestId: string): PreparedVerification {
+    const request = this.get(requestId);
+    if (request.status !== 'PROOF_READY') {
+      throw new Error(`Request is not PROOF_READY: ${request.status}`);
+    }
+    if (request.chainId !== config.sourceChainId) {
+      throw new Error(`Request source chain ${request.chainId} does not match configured chain ${config.sourceChainId}`);
+    }
+    if (!request.proof) throw new Error('PROOF_READY request has no proof data');
+    if (!config.addresses.uscVerifier || !ethers.isAddress(config.addresses.uscVerifier)) {
+      throw new Error('USC_VERIFIER_ADDR is not configured with a valid address');
+    }
+
+    const proof = request.proof;
+    const proofChainKey = requireSafeUint(proof.chainKey, 'Proof chainKey');
+    const blockHeight = requireSafeUint(proof.headerNumber, 'Proof headerNumber');
+    if (proofChainKey !== request.chainKey) {
+      throw new Error(`Proof chainKey ${proofChainKey} does not match request chainKey ${request.chainKey}`);
+    }
+    if (request.sourceBlock !== undefined && blockHeight !== request.sourceBlock) {
+      throw new Error(`Proof block ${blockHeight} does not match source block ${request.sourceBlock}`);
+    }
+    if (typeof proof.txHash !== 'string' || proof.txHash.toLowerCase() !== request.txHash.toLowerCase()) {
+      throw new Error('Proof transaction hash does not match the verification request');
+    }
+
+    const merkleProof = proof.merkleProof;
+    if (!merkleProof || typeof merkleProof !== 'object' || !Array.isArray(merkleProof.siblings)) {
+      throw new Error('Proof is missing its SDK Merkle proof and sibling array');
+    }
+    const siblings = merkleProof.siblings.map((entry: MerkleProofEntry, index: number) => {
+      if (!entry || typeof entry !== 'object' || typeof entry.isLeft !== 'boolean') {
+        throw new Error(`Merkle sibling ${index} has an invalid isLeft flag`);
+      }
+      return {
+        hash: requireBytes32(entry.hash, `Merkle sibling ${index} hash`),
+        isLeft: entry.isLeft,
+      };
+    });
+
+    const continuityProof = proof.continuityProof;
+    if (!continuityProof || typeof continuityProof !== 'object' || !Array.isArray(continuityProof.roots)) {
+      throw new Error('Proof is missing its SDK continuity proof and roots array');
+    }
+    const continuityRoots = continuityProof.roots.map((root: string, index: number) =>
+      requireBytes32(root, `Continuity root ${index}`),
+    );
+
+    const encodedTransaction = requireEncodedBytes(proof.txBytes, 'Proof txBytes');
+    const merkleRoot = requireBytes32(merkleProof.root, 'Merkle root');
+    const lowerEndpointDigest = requireBytes32(
+      continuityProof.lowerEndpointDigest,
+      'Continuity lowerEndpointDigest',
+    );
+    const evidenceType = request.eventType === 'REPAYMENT' ? 1 : 0;
+    const borrower = ethers.getAddress(request.borrower);
+    const to = ethers.getAddress(config.addresses.uscVerifier);
+    const data = verifierInterface.encodeFunctionData('verifyEvidence', [
+      evidenceType,
+      borrower,
+      proofChainKey,
+      blockHeight,
+      encodedTransaction,
+      merkleRoot,
+      siblings,
+      lowerEndpointDigest,
+      continuityRoots,
+    ]);
+
+    return {
+      to,
+      data,
+      value: 0,
+      requestId,
+      borrower,
+      sourceTxHash: request.txHash,
+      chainId: request.chainId,
+      chainKey: proofChainKey,
+      blockHeight,
+    };
+  }
+
   async completeVerification(requestId: string, creditcoinTxHash: string, evidenceId: string): Promise<CreditFeature> {
     const request = this.get(requestId);
+    const network = await this.creditcoinProvider.getNetwork();
+    if (network.chainId !== BigInt(config.chainId)) {
+      request.status = 'FAILED';
+      request.error = `Wrong Creditcoin network: expected chain ID ${config.chainId}, got ${network.chainId}`;
+      throw new Error(request.error);
+    }
     if (request.status !== 'PROOF_READY' && request.status !== 'SUBMITTING') {
       throw new Error(`Request is not ready for completion: ${request.status}`);
     }
@@ -113,6 +240,56 @@ export class AttestcoinService {
       request.error = 'Creditcoin transaction did not target USCVerifier';
       throw new Error(request.error);
     }
+    if (receipt.from?.toLowerCase() !== request.borrower.toLowerCase()) {
+      request.status = 'FAILED';
+      request.error = 'Creditcoin transaction signer does not match the request borrower';
+      throw new Error(request.error);
+    }
+
+    const expectedEvidenceId = evidenceId.toLowerCase();
+    const expectedEvidenceType = request.eventType === 'REPAYMENT' ? 1 : 0;
+    let emittedEvidenceId: string | undefined;
+    for (const log of receipt.logs) {
+      if (log.address.toLowerCase() !== config.addresses.uscVerifier.toLowerCase()) continue;
+      try {
+        const parsed = verifierInterface.parseLog({ topics: [...log.topics], data: log.data });
+        if (parsed?.name === 'EvidenceVerified') {
+          emittedEvidenceId = String(parsed.args.evidenceId);
+          if (emittedEvidenceId.toLowerCase() !== expectedEvidenceId) {
+            request.status = 'FAILED';
+            request.error = 'EvidenceVerified event evidence ID does not match completion payload';
+            throw new Error(request.error);
+          }
+          if (String(parsed.args.borrower).toLowerCase() !== request.borrower.toLowerCase()) {
+            request.status = 'FAILED';
+            request.error = 'EvidenceVerified event borrower does not match the request borrower';
+            throw new Error(request.error);
+          }
+          if (Number(parsed.args.chainKey) !== request.chainKey) {
+            request.status = 'FAILED';
+            request.error = 'EvidenceVerified event chain key does not match the request';
+            throw new Error(request.error);
+          }
+          if (Number(parsed.args.evidenceType) !== expectedEvidenceType) {
+            request.status = 'FAILED';
+            request.error = 'EvidenceVerified event type does not match the request';
+            throw new Error(request.error);
+          }
+          if (request.sourceBlock !== undefined && Number(parsed.args.blockHeight) !== request.sourceBlock) {
+            request.status = 'FAILED';
+            request.error = 'EvidenceVerified event block does not match the request';
+            throw new Error(request.error);
+          }
+        }
+      } catch (error) {
+        if (error instanceof Error && error.message.startsWith('EvidenceVerified event')) throw error;
+      }
+    }
+    if (!emittedEvidenceId) {
+      request.status = 'FAILED';
+      request.error = 'Creditcoin receipt is missing the USCVerifier EvidenceVerified event';
+      throw new Error(request.error);
+    }
 
     const verifier = new ethers.Contract(config.addresses.uscVerifier, USC_VERIFIER_ABI, this.creditcoinProvider);
     const evidence = await verifier.verifiedEvidence(evidenceId);
@@ -126,6 +303,16 @@ export class AttestcoinService {
       request.error = 'Verified evidence is inactive or from an unexpected source chain';
       throw new Error(request.error);
     }
+    if (Number(evidence.evidenceType) !== expectedEvidenceType) {
+      request.status = 'FAILED';
+      request.error = 'Verified evidence type does not match the request';
+      throw new Error(request.error);
+    }
+    if (request.sourceBlock !== undefined && Number(evidence.blockHeight) !== request.sourceBlock) {
+      request.status = 'FAILED';
+      request.error = 'Verified evidence block does not match the proof request';
+      throw new Error(request.error);
+    }
 
     const rawResult = {
       amount: evidence.amount.toString(),
@@ -135,6 +322,7 @@ export class AttestcoinService {
       verificationContext: evidence.transactionHash,
       sourceBlock: Number(evidence.blockHeight),
       sourceChainKey: Number(evidence.chainKey),
+      creditcoinTxHash,
     };
     request.feature = evidenceNormalizer.normalizeAndStore(
       request.borrower,

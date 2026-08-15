@@ -1,7 +1,7 @@
 import { BrowserProvider, Contract, type ContractTransactionResponse, type Signer } from 'ethers';
 import { useAppKitAccount, useAppKitProvider } from '@reown/appkit/react';
 import { appKit, creditcoinTestnet } from './appkit';
-import deploymentManifest from '../../config/deployments.json';
+import deploymentManifest from '../../config/privatecredit-cc3-live-v3.json';
 
 export const deployment = {
   ...deploymentManifest,

@@ -11,7 +11,7 @@ import JudgeView from './views/JudgeView';
 import { api } from './api/client';
 import './App.css';
 import { appKit } from './appkit';
-import { deployment, useCreditcoinWallet } from './wallet';
+import { useCreditcoinWallet } from './wallet';
 
 function App() {
   const [activeView, setActiveView] = useState('overview');
@@ -241,61 +241,88 @@ function App() {
 // ─── Add Evidence Modal ──────────────────────────────────────
 function AddEvidenceModal({ borrower, onClose, onSuccess }: { borrower: string; onClose: () => void; onSuccess: () => void }) {
   const [form, setForm] = useState({ chainId: '11155111', eventType: 'INFLOW', txHash: '' });
+  const [existingRequestId, setExistingRequestId] = useState('');
   const [status, setStatus] = useState<'idle' | 'verifying' | 'waiting' | 'proof-ready' | 'signing' | 'done' | 'error'>('idle');
   const [requestId, setRequestId] = useState<string | null>(null);
-  const [proofRequest, setProofRequest] = useState<any>(null);
   const [result, setResult] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { getSigner } = useCreditcoinWallet();
-  const verifierAbi = [
-    'function verifyEvidence(uint8 evidenceType,address borrower,uint64 chainKey,uint64 blockHeight,bytes encodedTransaction,bytes32 merkleRoot,tuple(bytes32 hash,bool isLeft)[] siblings,bytes32 lowerEndpointDigest,bytes32[] continuityRoots) external returns (bytes32 evidenceId,uint256 amount,bytes32 transactionHash)',
+  const verifierInterface = new Interface([
     'event EvidenceVerified(bytes32 indexed queryId,bytes32 indexed evidenceId,address indexed borrower,uint64 chainKey,uint64 blockHeight,address token,address sender,uint256 amount,uint8 evidenceType,bytes32 transactionHash)',
-  ];
+  ]);
 
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
-  const signProof = async (request: any) => {
-    if (!request.proof) throw new Error('Proof data is not ready');
-    const signer = await getSigner();
-    const proof = request.proof;
-    const evidenceType = form.eventType === 'REPAYMENT' ? 1 : 0;
+  const signProof = async () => {
     setStatus('signing');
-    const tx = await signer.sendTransaction({
-      to: deployment.contracts.uscVerifier,
-      data: new Interface(verifierAbi).encodeFunctionData('verifyEvidence', [
-        evidenceType,
-        borrower,
-        proof.chainKey,
-        proof.headerNumber,
-        proof.txBytes,
-        proof.merkleProof.root,
-        proof.merkleProof.siblings,
-        proof.continuityProof.lowerEndpointDigest,
-        proof.continuityProof.roots,
-      ]),
-      value: 0,
-    });
-    const receipt = await tx.wait();
-    if (!receipt) throw new Error('USC verification transaction did not return a receipt');
-    const iface = new Interface(verifierAbi);
-    let evidenceId: string | undefined;
-    for (const log of receipt.logs) {
-      try {
-        const parsed = iface.parseLog({ topics: [...log.topics], data: log.data });
-        if (parsed?.name === 'EvidenceVerified') evidenceId = parsed.args.evidenceId;
-      } catch { /* ignore unrelated logs */ }
+    setResult(null);
+    try {
+      if (!requestId) throw new Error('Verification request ID is missing');
+      const prepared = await api.prepareVerification(requestId);
+      if (prepared.borrower.toLowerCase() !== borrower.toLowerCase()) {
+        throw new Error('Prepared proof borrower does not match the connected wallet');
+      }
+      const signer = await getSigner();
+      const signerAddress = await signer.getAddress();
+      if (signerAddress.toLowerCase() !== prepared.borrower.toLowerCase()) {
+        throw new Error('Connected wallet does not match the proof borrower');
+      }
+      const tx = await signer.sendTransaction({
+        to: prepared.to,
+        data: prepared.data,
+        value: prepared.value,
+      });
+      const receipt = await tx.wait();
+      if (!receipt || receipt.status !== 1) {
+        throw new Error('USCVerifier transaction was not confirmed successfully');
+      }
+
+      let evidenceId: string | undefined;
+      for (const log of receipt.logs) {
+        if (log.address.toLowerCase() !== prepared.to.toLowerCase()) continue;
+        try {
+          const parsed = verifierInterface.parseLog({ topics: [...log.topics], data: log.data });
+          if (parsed?.name === 'EvidenceVerified') {
+            const eventBorrower = String(parsed.args.borrower);
+            if (eventBorrower.toLowerCase() !== prepared.borrower.toLowerCase()) {
+              throw new Error('EvidenceVerified borrower does not match the connected wallet');
+            }
+            evidenceId = String(parsed.args.evidenceId);
+          }
+        } catch (error) {
+          if (error instanceof Error && error.message.startsWith('EvidenceVerified borrower')) throw error;
+        }
+      }
+      if (!evidenceId) throw new Error('USCVerifier receipt did not contain EvidenceVerified');
+
+      await api.completeVerification(requestId, receipt.hash, evidenceId);
+      const completed = await api.checkVerification(requestId);
+      if (completed.status !== 'VERIFIED') {
+        throw new Error(`Backend did not confirm VERIFIED status: ${completed.status}`);
+      }
+      setStatus('done');
+      setResult(`Verified evidence added. Creditcoin transaction: ${receipt.hash}`);
+      onSuccess();
+    } catch (error: any) {
+      setStatus('error');
+      setResult(error.message || 'Live USC verification failed.');
     }
-    if (!evidenceId) throw new Error('USC verification receipt did not contain EvidenceVerified');
-    await api.completeVerification(requestId!, receipt.hash, evidenceId);
-    setStatus('done');
-    setResult(`Verified evidence added. Creditcoin transaction: ${receipt.hash}`);
-    onSuccess();
   };
 
   const handleSubmit = async () => {
     setStatus('verifying');
     setResult(null);
     try {
+      const suppliedRequestId = existingRequestId.trim();
+      if (suppliedRequestId) {
+        const existing = await api.checkVerification(suppliedRequestId);
+        setRequestId(suppliedRequestId);
+        if (existing.status !== 'PROOF_READY') {
+          throw new Error(`Existing request is not PROOF_READY: ${existing.status}`);
+        }
+        setStatus('proof-ready');
+        return;
+      }
       if (!form.txHash) throw new Error('Enter a mined source-chain transaction hash');
       const response = await api.verify(form.chainId, form.eventType, form.txHash, borrower);
       setRequestId(response.requestId);
@@ -303,12 +330,13 @@ function AddEvidenceModal({ borrower, onClose, onSuccess }: { borrower: string; 
       pollRef.current = setInterval(async () => {
         try {
           const statusResponse = await api.checkVerification(response.requestId);
-          setProofRequest(statusResponse);
           if (statusResponse.status === 'PROOF_READY') {
             if (pollRef.current) clearInterval(pollRef.current);
+            pollRef.current = null;
             setStatus('proof-ready');
           } else if (statusResponse.status === 'FAILED' || statusResponse.status === 'UNSUPPORTED') {
             if (pollRef.current) clearInterval(pollRef.current);
+            pollRef.current = null;
             setStatus('error');
             setResult(statusResponse.error || 'Attestcoin proof generation failed.');
           }
@@ -336,7 +364,11 @@ function AddEvidenceModal({ borrower, onClose, onSuccess }: { borrower: string; 
           <button className="modal-close" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="modal-body">
-          <p className="modal-desc">Submit a supported source-chain transaction. Attestcoin will wait for attestation and proof generation; the final Creditcoin verification must be signed by your connected wallet.</p>
+          <p className="modal-desc">Submit a supported source-chain transaction, or load an existing PROOF_READY request. Attestcoin proof data stays on the backend until the final verification calldata is prepared; the Creditcoin transaction must be signed by your connected wallet.</p>
+          <div className="form-field">
+            <label>Existing PROOF_READY request ID (optional)</label>
+            <input value={existingRequestId} onChange={e => setExistingRequestId(e.target.value)} placeholder="req_..." />
+          </div>
           <div className="form-field">
             <label>Source Chain ID</label>
             <input value={form.chainId} onChange={e => setForm({...form, chainId: e.target.value})} />
@@ -361,8 +393,8 @@ function AddEvidenceModal({ borrower, onClose, onSuccess }: { borrower: string; 
           {status === 'done' && <div className="result-msg success">{result}</div>}
           {status === 'error' && <div className="result-msg error">{result}</div>}
 
-          <button className="primary-action-btn" onClick={() => void (status === 'proof-ready' ? signProof(proofRequest) : handleSubmit())} disabled={['verifying', 'waiting', 'signing', 'done'].includes(status)}>
-            {status === 'idle' ? 'Request Attestcoin Proof' : status === 'proof-ready' ? 'Verify on Creditcoin' : status === 'done' ? '✓ Done' : status === 'signing' ? 'Awaiting Signature...' : 'Generating Proof...'}
+          <button className="primary-action-btn" onClick={() => void (status === 'proof-ready' ? signProof() : handleSubmit())} disabled={['verifying', 'waiting', 'signing', 'done'].includes(status)}>
+            {status === 'idle' ? (existingRequestId.trim() ? 'Load Existing Proof' : 'Request Attestcoin Proof') : status === 'proof-ready' ? 'Verify on Creditcoin' : status === 'done' ? '✓ Done' : status === 'signing' ? 'Awaiting Signature...' : 'Generating Proof...'}
           </button>
         </div>
       </div>

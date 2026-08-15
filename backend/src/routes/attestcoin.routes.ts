@@ -13,6 +13,18 @@ attestcoinRouter.post('/verify', async (req: Request, res: Response) => {
   }
 });
 
+attestcoinRouter.post('/prepare', (req: Request, res: Response) => {
+  try {
+    const { requestId } = req.body;
+    if (typeof requestId !== 'string' || requestId.length === 0) {
+      throw new Error('requestId is required');
+    }
+    res.json(attestcoinService.prepareVerification(requestId));
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 attestcoinRouter.get('/status/:requestId', (req: Request, res: Response) => {
   try {
     const request = attestcoinService.checkVerificationStatus(req.params.requestId as string);

@@ -1,7 +1,14 @@
 import dotenv from 'dotenv';
-import deployment from '../../config/deployments.json';
+import legacyDeployment from '../../config/deployments.json';
+import liveDeployment from '../../config/privatecredit-cc3-live-v3.json';
 
 dotenv.config();
+
+const deployment = {
+  ...legacyDeployment,
+  ...liveDeployment,
+  contracts: liveDeployment.contracts,
+};
 
 export type AppMode = 'live' | 'local-test';
 

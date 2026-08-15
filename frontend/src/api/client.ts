@@ -16,6 +16,8 @@ export const api = {
   verify: (chainId: string, eventType: string, txHash: string, borrower: string) =>
     fetchJSON('/attestcoin/verify', { method: 'POST', body: JSON.stringify({ chainId, eventType, txHash, borrower }) }),
   checkVerification: (requestId: string) => fetchJSON(`/attestcoin/status/${requestId}`),
+  prepareVerification: (requestId: string) =>
+    fetchJSON('/attestcoin/prepare', { method: 'POST', body: JSON.stringify({ requestId }) }),
   completeVerification: (requestId: string, creditcoinTxHash: string, evidenceId: string) =>
     fetchJSON('/attestcoin/complete', { method: 'POST', body: JSON.stringify({ requestId, creditcoinTxHash, evidenceId }) }),
   getGraph: (borrower: string) => fetchJSON(`/graph/${borrower}`),
