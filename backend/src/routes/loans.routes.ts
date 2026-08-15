@@ -1,95 +1,194 @@
 import { Router, Request, Response } from 'express';
 import { ethers } from 'ethers';
+import { config } from '../config';
 
 export const loansRouter = Router();
-
-const USE_REAL_NETWORK = process.env.USE_REAL_NETWORK === 'true';
-const RPC_URL = USE_REAL_NETWORK 
-    ? (process.env.CREDITCOIN_RPC_URL || 'https://rpc.cc3-testnet.creditcoin.network') 
-    : 'http://127.0.0.1:8545';
-const provider = new ethers.JsonRpcProvider(RPC_URL);
-
-const MARKETPLACE_ADDR = process.env.MARKETPLACE_ADDR || '0x776645cD81Ab903c573De406615A2f4c429ca9cc';
-const VAULT_ADDR = process.env.LOAN_VAULT_ADDR || '0x2773338984c5036374E02496848335C24cBd975b';
-const CAPACITY_MANAGER_ADDR = process.env.CAPACITY_MANAGER_ADDR || '0x4f55B2668e74d7AB350b7d105aAc8b914B9aEDBc';
-
+const provider = new ethers.JsonRpcProvider(config.rpcUrl);
 
 const MARKETPLACE_ABI = [
-    "function createBorrowRequest(uint256 amount, uint256 maxAprBps, uint256 maxDuration, uint256 collateralAmount) external returns (uint256)",
-    "function createLenderOffer(uint256 requestId, uint256 aprBps, uint256 duration, uint256 requiredCollateral) external payable returns (uint256)",
-    "function acceptOffer(uint256 offerId) external payable",
-    "event RequestCreated(uint256 indexed requestId, address indexed borrower, uint256 amount)",
-    "event OfferCreated(uint256 indexed offerId, uint256 indexed requestId, address indexed lender)",
-    "event OfferAccepted(uint256 indexed offerId, uint256 indexed requestId)"
+  'function createBorrowRequest(uint256 amount, uint256 maxAprBps, uint256 maxDuration, uint256 collateralAmount) external returns (uint256)',
+  'function createLenderOffer(uint256 requestId, uint256 aprBps, uint256 duration, uint256 requiredCollateral) external payable returns (uint256)',
+  'function acceptOffer(uint256 offerId) external payable',
+  'function getOpenRequests() external view returns (tuple(uint256 requestId,address borrower,uint256 amount,uint256 maxAprBps,uint256 maxDuration,uint256 collateralAmount,uint8 status,uint256 createdAt)[])',
+  'event RequestCreated(uint256 indexed requestId, address indexed borrower, uint256 amount)',
+  'event OfferCreated(uint256 indexed offerId, uint256 indexed requestId, address indexed lender)',
+  'event OfferAccepted(uint256 indexed offerId, uint256 indexed requestId)',
 ];
 
 const VAULT_ABI = [
-    "function repayLoan(uint256 loanId) external payable",
-    "function calculateTotalOwed(uint256 loanId) public view returns (uint256)",
-    "function getLoan(uint256 loanId) external view returns (tuple(uint256 loanId, address borrower, address lender, uint256 principal, uint256 aprBps, uint256 startTime, uint256 duration, uint256 collateralAmount, uint256 repaidAmount, uint8 status))",
-    "event LoanOriginated(uint256 indexed loanId, address indexed borrower, address indexed lender, uint256 principal)",
-    "event LoanRepaid(uint256 indexed loanId, uint256 amount)"
+  'function repayLoan(uint256 loanId) external payable',
+  'function calculateTotalOwed(uint256 loanId) public view returns (uint256)',
+  'function getLoan(uint256 loanId) external view returns (tuple(uint256 loanId,address borrower,address lender,uint256 principal,uint256 aprBps,uint256 startTime,uint256 duration,uint256 collateralAmount,uint256 repaidAmount,uint8 status))',
+  'event LoanOriginated(uint256 indexed loanId,address indexed borrower,address indexed lender,uint256 principal)',
+  'event LoanRepaid(uint256 indexed loanId,uint256 amount)',
 ];
 
 const CAPACITY_MANAGER_ABI = [
-    "function availableCapacity(address borrower) external view returns (uint256)",
-    "function getUsedCapacity(address borrower) external view returns (uint256)"
+  'function availableCapacity(address borrower) external view returns (uint256)',
+  'function getUsedCapacity(address borrower) external view returns (uint256)',
+  'function getDefaultedLockedCapacity(address borrower) external view returns (uint256)',
+  'function getTotalConsumedCapacity(address borrower) external view returns (uint256)',
 ];
 
+const marketplaceInterface = new ethers.Interface(MARKETPLACE_ABI);
+const vaultInterface = new ethers.Interface(VAULT_ABI);
+
+function requireAddress(value: unknown, field: string): string {
+  if (typeof value !== 'string' || !ethers.isAddress(value)) {
+    throw new Error(`${field} must be a valid wallet address`);
+  }
+  return ethers.getAddress(value);
+}
+
+function requireUint(value: unknown, field: string): string {
+  if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'bigint') {
+    throw new Error(`${field} is required`);
+  }
+  const parsed = BigInt(value);
+  if (parsed < 0n) throw new Error(`${field} must be non-negative`);
+  return parsed.toString();
+}
+
+function preparedTransaction(to: string, data: string, value = '0') {
+  return { chainId: config.chainId, to, data, value };
+}
+
+loansRouter.post('/prepare/borrow-request', (req: Request, res: Response) => {
+  try {
+    requireAddress(req.body.from, 'from');
+    const amount = requireUint(req.body.amount, 'amount');
+    const maxAprBps = requireUint(req.body.maxAprBps, 'maxAprBps');
+    const maxDuration = requireUint(req.body.maxDuration, 'maxDuration');
+    const collateralAmount = requireUint(req.body.collateralAmount, 'collateralAmount');
+    const data = marketplaceInterface.encodeFunctionData('createBorrowRequest', [
+      amount,
+      maxAprBps,
+      maxDuration,
+      collateralAmount,
+    ]);
+    res.json({ success: true, transaction: preparedTransaction(config.addresses.loanMarketplace, data) });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+loansRouter.post('/prepare/offer', (req: Request, res: Response) => {
+  try {
+    requireAddress(req.body.from, 'from');
+    const requestId = requireUint(req.body.requestId, 'requestId');
+    const aprBps = requireUint(req.body.aprBps, 'aprBps');
+    const duration = requireUint(req.body.duration, 'duration');
+    const requiredCollateral = requireUint(req.body.requiredCollateral, 'requiredCollateral');
+    const principal = requireUint(req.body.principal, 'principal');
+    const data = marketplaceInterface.encodeFunctionData('createLenderOffer', [
+      requestId,
+      aprBps,
+      duration,
+      requiredCollateral,
+    ]);
+    res.json({ success: true, transaction: preparedTransaction(config.addresses.loanMarketplace, data, principal) });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+loansRouter.post('/prepare/accept-offer', (req: Request, res: Response) => {
+  try {
+    requireAddress(req.body.from, 'from');
+    const offerId = requireUint(req.body.offerId, 'offerId');
+    const collateralAmount = requireUint(req.body.collateralAmount, 'collateralAmount');
+    const data = marketplaceInterface.encodeFunctionData('acceptOffer', [offerId]);
+    res.json({ success: true, transaction: preparedTransaction(config.addresses.loanMarketplace, data, collateralAmount) });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+loansRouter.post('/prepare/repay', (req: Request, res: Response) => {
+  try {
+    requireAddress(req.body.from, 'from');
+    const loanId = requireUint(req.body.loanId, 'loanId');
+    const repaymentAmount = requireUint(req.body.repaymentAmount, 'repaymentAmount');
+    const data = vaultInterface.encodeFunctionData('repayLoan', [loanId]);
+    res.json({ success: true, transaction: preparedTransaction(config.addresses.loanVault, data, repaymentAmount) });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+loansRouter.get('/requests/open', async (_req: Request, res: Response) => {
+  try {
+    const contract = new ethers.Contract(config.addresses.loanMarketplace, MARKETPLACE_ABI, provider);
+    const requests = await contract.getOpenRequests();
+    res.json({ success: true, requests: requests.map((request: any) => ({
+      requestId: request.requestId.toString(),
+      borrower: request.borrower,
+      amount: request.amount.toString(),
+      maxAprBps: request.maxAprBps.toString(),
+      maxDuration: request.maxDuration.toString(),
+      collateralAmount: request.collateralAmount.toString(),
+      status: Number(request.status),
+      createdAt: request.createdAt.toString(),
+    })) });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 loansRouter.get('/total-owed/:loanId', async (req: Request, res: Response) => {
-    try {
-        const loanId = parseInt(req.params.loanId as string);
-        const contract = new ethers.Contract(VAULT_ADDR, VAULT_ABI, provider);
-        const totalOwed = await contract.calculateTotalOwed(loanId);
-        res.json({ loanId, totalOwed: totalOwed.toString() });
-    } catch (e: any) {
-        res.status(500).json({ error: e.message });
-    }
+  try {
+    const loanId = Number(requireUint(req.params.loanId, 'loanId'));
+    const contract = new ethers.Contract(config.addresses.loanVault, VAULT_ABI, provider);
+    const totalOwed = await contract.calculateTotalOwed(loanId);
+    res.json({ loanId, totalOwed: totalOwed.toString() });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 loansRouter.get('/capacity/:address', async (req: Request, res: Response) => {
-    try {
-        const borrower = req.params.address as string;
-        const contract = new ethers.Contract(CAPACITY_MANAGER_ADDR, CAPACITY_MANAGER_ABI, provider);
-        
-        const [available, used] = await Promise.all([
-            contract.availableCapacity(borrower),
-            contract.getUsedCapacity(borrower)
-        ]);
-
-        res.json({
-            success: true,
-            availableCapacity: available.toString(),
-            usedCapacity: used.toString()
-        });
-    } catch (e: any) {
-        res.status(500).json({ error: e.message });
-    }
+  try {
+    const borrower = requireAddress(req.params.address, 'address');
+    const contract = new ethers.Contract(config.addresses.capacityManager, CAPACITY_MANAGER_ABI, provider);
+    const [available, used, locked, consumed] = await Promise.all([
+      contract.availableCapacity(borrower),
+      contract.getUsedCapacity(borrower),
+      contract.getDefaultedLockedCapacity(borrower),
+      contract.getTotalConsumedCapacity(borrower),
+    ]);
+    res.json({
+      success: true,
+      availableCapacity: available.toString(),
+      usedCapacity: used.toString(),
+      defaultedLockedCapacity: locked.toString(),
+      totalConsumedCapacity: consumed.toString(),
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 loansRouter.get('/:loanId', async (req: Request, res: Response) => {
-    try {
-        const loanId = parseInt(req.params.loanId as string);
-        const contract = new ethers.Contract(VAULT_ADDR, VAULT_ABI, provider);
-        const loan = await contract.getLoan(loanId);
-        
-        res.json({
-            success: true,
-            loan: {
-                loanId: loan.loanId.toString(),
-                borrower: loan.borrower,
-                lender: loan.lender,
-                principal: loan.principal.toString(),
-                aprBps: loan.aprBps.toString(),
-                startTime: loan.startTime.toString(),
-                duration: loan.duration.toString(),
-                collateralAmount: loan.collateralAmount.toString(),
-                repaidAmount: loan.repaidAmount.toString(),
-                status: Number(loan.status)
-            }
-        });
-    } catch (e: any) {
-        res.status(500).json({ error: e.message });
-    }
+  try {
+    const loanId = Number(requireUint(req.params.loanId, 'loanId'));
+    const contract = new ethers.Contract(config.addresses.loanVault, VAULT_ABI, provider);
+    const loan = await contract.getLoan(loanId);
+    res.json({
+      success: true,
+      loan: {
+        loanId: loan.loanId.toString(),
+        borrower: loan.borrower,
+        lender: loan.lender,
+        principal: loan.principal.toString(),
+        aprBps: loan.aprBps.toString(),
+        startTime: loan.startTime.toString(),
+        duration: loan.duration.toString(),
+        collateralAmount: loan.collateralAmount.toString(),
+        repaidAmount: loan.repaidAmount.toString(),
+        status: Number(loan.status),
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });

@@ -1,249 +1,375 @@
-import { randomBytes } from 'crypto';
 import { ethers } from 'ethers';
-import { proofProvider, blockProver } from '@gluwa/usc-sdk';
+import { blockProver, proofProvider } from '@gluwa/usc-sdk';
+import type { ContinuityResponse } from '@gluwa/usc-sdk/dist/proof-provider';
+import type { MerkleProofEntry } from '@gluwa/usc-sdk/dist/proof-provider/merkle';
+import { config } from '../config';
+import { evidenceNormalizer, CreditFeature } from './EvidenceNormalizer';
 
-export type VerificationStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'EXPIRED';
+export type VerificationStatus =
+  | 'PENDING_ATTESTATION'
+  | 'PROOF_GENERATING'
+  | 'PROOF_READY'
+  | 'SUBMITTING'
+  | 'VERIFIED'
+  | 'FAILED'
+  | 'UNSUPPORTED';
 
 export interface VerificationRequest {
-    requestId: string;
-    chainId: string;
-    eventType: string;
-    txHash: string;
-    borrower: string;
-    status: VerificationStatus;
-    timestamp: number;
-    mockResult?: any;
-    proofData?: any;
+  requestId: string;
+  chainId: number;
+  chainKey: number;
+  eventType: 'INFLOW' | 'REPAYMENT';
+  txHash: string;
+  borrower: string;
+  status: VerificationStatus;
+  createdAt: number;
+  sourceBlock?: number;
+  proof?: ContinuityResponse;
+  creditcoinTxHash?: string;
+  evidenceId?: string;
+  error?: string;
+  feature?: CreditFeature;
+}
+
+export interface PreparedVerification {
+  to: string;
+  data: string;
+  value: 0;
+  requestId: string;
+  borrower: string;
+  sourceTxHash: string;
+  chainId: number;
+  chainKey: number;
+  blockHeight: number;
+}
+
+const USC_VERIFIER_ABI = [
+  'function verifyEvidence(uint8 evidenceType,address borrower,uint64 chainKey,uint64 blockHeight,bytes encodedTransaction,bytes32 merkleRoot,tuple(bytes32 hash,bool isLeft)[] siblings,bytes32 lowerEndpointDigest,bytes32[] continuityRoots)',
+  'function verifiedEvidence(bytes32 evidenceId) external view returns (tuple(address borrower,uint8 evidenceType,uint64 chainKey,uint64 blockHeight,address token,address sender,uint256 amount,bytes32 transactionHash,bool active))',
+  'event EvidenceVerified(bytes32 indexed queryId,bytes32 indexed evidenceId,address indexed borrower,uint64 chainKey,uint64 blockHeight,address token,address sender,uint256 amount,uint8 evidenceType,bytes32 transactionHash)',
+];
+
+const verifierInterface = new ethers.Interface(USC_VERIFIER_ABI);
+
+function requireBytes32(value: unknown, label: string): string {
+  if (typeof value !== 'string' || !ethers.isHexString(value, 32)) {
+    throw new Error(`${label} must be a 32-byte hex value`);
+  }
+  return value;
+}
+
+function requireEncodedBytes(value: unknown, label: string): string {
+  if (typeof value !== 'string' || !ethers.isHexString(value) || value === '0x') {
+    throw new Error(`${label} must be non-empty encoded transaction bytes`);
+  }
+  return value;
+}
+
+function requireSafeUint(value: unknown, label: string): number {
+  const numberValue = Number(value);
+  if (!Number.isSafeInteger(numberValue) || numberValue < 0) {
+    throw new Error(`${label} must be a non-negative safe integer`);
+  }
+  return numberValue;
 }
 
 export class AttestcoinService {
-    private requests: Map<string, VerificationRequest> = new Map();
-    private provider: ethers.JsonRpcProvider;
-    private useRealAttestcoin: boolean;
+  private readonly requests = new Map<string, VerificationRequest>();
+  private readonly creditcoinProvider = new ethers.JsonRpcProvider(config.rpcUrl);
+  private readonly sourceProvider?: ethers.JsonRpcProvider;
 
-    constructor() {
-        this.useRealAttestcoin = process.env.USE_REAL_ATTESTCOIN === 'true';
-        
-        const RPC_URL = process.env.CREDITCOIN_RPC_URL || 'https://rpc.cc3-testnet.creditcoin.network';
-        this.provider = new ethers.JsonRpcProvider(RPC_URL);
+  constructor() {
+    const sourceRpc = process.env.SOURCE_CHAIN_RPC_URL;
+    if (sourceRpc) this.sourceProvider = new ethers.JsonRpcProvider(sourceRpc);
+  }
 
-        if (this.useRealAttestcoin) {
-            console.log("AttestcoinService initialized in LIVE mode (USC SDK)");
-        } else {
-            console.log("AttestcoinService initialized in MOCK mode");
+  async createVerificationRequest(
+    chainIdInput: string,
+    eventTypeInput: string,
+    txHash: string,
+    borrower: string,
+  ): Promise<string> {
+    const chainId = Number(chainIdInput);
+    if (!Number.isInteger(chainId) || chainId !== config.sourceChainId) {
+      throw new Error(`Unsupported source chain ${chainIdInput}; configured live chain is ${config.sourceChainId}.`);
+    }
+    if (eventTypeInput !== 'INFLOW' && eventTypeInput !== 'REPAYMENT') {
+      throw new Error(`Unsupported evidence type: ${eventTypeInput}`);
+    }
+    if (!ethers.isAddress(borrower)) throw new Error('Borrower must be a valid address');
+    if (!ethers.isHexString(txHash, 32)) throw new Error('Source transaction hash must be 32-byte hex');
+    if (!config.sourceToken) throw new Error('SOURCE_TOKEN_ADDRESS is not configured');
+    if (!this.sourceProvider) throw new Error('SOURCE_CHAIN_RPC_URL is required for live verification');
+    if (!config.addresses.uscVerifier) throw new Error('USC_VERIFIER_ADDR is required for live verification');
+
+    const requestId = `req_${ethers.hexlify(ethers.randomBytes(16)).slice(2)}`;
+    const request: VerificationRequest = {
+      requestId,
+      chainId,
+      chainKey: config.sourceChainKey,
+      eventType: eventTypeInput as 'INFLOW' | 'REPAYMENT',
+      txHash: txHash.toLowerCase(),
+      borrower: ethers.getAddress(borrower),
+      status: 'PENDING_ATTESTATION',
+      createdAt: Date.now(),
+    };
+    this.requests.set(requestId, request);
+    void this.prepareProof(requestId);
+    return requestId;
+  }
+
+  get(requestId: string): VerificationRequest {
+    const request = this.requests.get(requestId);
+    if (!request) throw new Error('Verification request not found');
+    return request;
+  }
+
+  checkVerificationStatus(requestId: string): VerificationRequest {
+    return this.get(requestId);
+  }
+
+  prepareVerification(requestId: string): PreparedVerification {
+    const request = this.get(requestId);
+    if (request.status !== 'PROOF_READY') {
+      throw new Error(`Request is not PROOF_READY: ${request.status}`);
+    }
+    if (request.chainId !== config.sourceChainId) {
+      throw new Error(`Request source chain ${request.chainId} does not match configured chain ${config.sourceChainId}`);
+    }
+    if (!request.proof) throw new Error('PROOF_READY request has no proof data');
+    if (!config.addresses.uscVerifier || !ethers.isAddress(config.addresses.uscVerifier)) {
+      throw new Error('USC_VERIFIER_ADDR is not configured with a valid address');
+    }
+
+    const proof = request.proof;
+    const proofChainKey = requireSafeUint(proof.chainKey, 'Proof chainKey');
+    const blockHeight = requireSafeUint(proof.headerNumber, 'Proof headerNumber');
+    if (proofChainKey !== request.chainKey) {
+      throw new Error(`Proof chainKey ${proofChainKey} does not match request chainKey ${request.chainKey}`);
+    }
+    if (request.sourceBlock !== undefined && blockHeight !== request.sourceBlock) {
+      throw new Error(`Proof block ${blockHeight} does not match source block ${request.sourceBlock}`);
+    }
+    if (typeof proof.txHash !== 'string' || proof.txHash.toLowerCase() !== request.txHash.toLowerCase()) {
+      throw new Error('Proof transaction hash does not match the verification request');
+    }
+
+    const merkleProof = proof.merkleProof;
+    if (!merkleProof || typeof merkleProof !== 'object' || !Array.isArray(merkleProof.siblings)) {
+      throw new Error('Proof is missing its SDK Merkle proof and sibling array');
+    }
+    const siblings = merkleProof.siblings.map((entry: MerkleProofEntry, index: number) => {
+      if (!entry || typeof entry !== 'object' || typeof entry.isLeft !== 'boolean') {
+        throw new Error(`Merkle sibling ${index} has an invalid isLeft flag`);
+      }
+      return {
+        hash: requireBytes32(entry.hash, `Merkle sibling ${index} hash`),
+        isLeft: entry.isLeft,
+      };
+    });
+
+    const continuityProof = proof.continuityProof;
+    if (!continuityProof || typeof continuityProof !== 'object' || !Array.isArray(continuityProof.roots)) {
+      throw new Error('Proof is missing its SDK continuity proof and roots array');
+    }
+    const continuityRoots = continuityProof.roots.map((root: string, index: number) =>
+      requireBytes32(root, `Continuity root ${index}`),
+    );
+
+    const encodedTransaction = requireEncodedBytes(proof.txBytes, 'Proof txBytes');
+    const merkleRoot = requireBytes32(merkleProof.root, 'Merkle root');
+    const lowerEndpointDigest = requireBytes32(
+      continuityProof.lowerEndpointDigest,
+      'Continuity lowerEndpointDigest',
+    );
+    const evidenceType = request.eventType === 'REPAYMENT' ? 1 : 0;
+    const borrower = ethers.getAddress(request.borrower);
+    const to = ethers.getAddress(config.addresses.uscVerifier);
+    const data = verifierInterface.encodeFunctionData('verifyEvidence', [
+      evidenceType,
+      borrower,
+      proofChainKey,
+      blockHeight,
+      encodedTransaction,
+      merkleRoot,
+      siblings,
+      lowerEndpointDigest,
+      continuityRoots,
+    ]);
+
+    return {
+      to,
+      data,
+      value: 0,
+      requestId,
+      borrower,
+      sourceTxHash: request.txHash,
+      chainId: request.chainId,
+      chainKey: proofChainKey,
+      blockHeight,
+    };
+  }
+
+  async completeVerification(requestId: string, creditcoinTxHash: string, evidenceId: string): Promise<CreditFeature> {
+    const request = this.get(requestId);
+    const network = await this.creditcoinProvider.getNetwork();
+    if (network.chainId !== BigInt(config.chainId)) {
+      request.status = 'FAILED';
+      request.error = `Wrong Creditcoin network: expected chain ID ${config.chainId}, got ${network.chainId}`;
+      throw new Error(request.error);
+    }
+    if (request.status !== 'PROOF_READY' && request.status !== 'SUBMITTING') {
+      throw new Error(`Request is not ready for completion: ${request.status}`);
+    }
+    if (!ethers.isHexString(creditcoinTxHash, 32) || !ethers.isHexString(evidenceId, 32)) {
+      throw new Error('Creditcoin transaction hash and evidence ID must be 32-byte hex');
+    }
+    if (!config.addresses.uscVerifier) throw new Error('USC_VERIFIER_ADDR is not configured');
+
+    request.status = 'SUBMITTING';
+    request.creditcoinTxHash = creditcoinTxHash;
+    request.evidenceId = evidenceId;
+    const receipt = await this.creditcoinProvider.getTransactionReceipt(creditcoinTxHash);
+    if (!receipt || receipt.status !== 1) {
+      request.status = 'FAILED';
+      request.error = 'Creditcoin USC verification transaction is not confirmed successfully';
+      throw new Error(request.error);
+    }
+    if (receipt.to?.toLowerCase() !== config.addresses.uscVerifier.toLowerCase()) {
+      request.status = 'FAILED';
+      request.error = 'Creditcoin transaction did not target USCVerifier';
+      throw new Error(request.error);
+    }
+    if (receipt.from?.toLowerCase() !== request.borrower.toLowerCase()) {
+      request.status = 'FAILED';
+      request.error = 'Creditcoin transaction signer does not match the request borrower';
+      throw new Error(request.error);
+    }
+
+    const expectedEvidenceId = evidenceId.toLowerCase();
+    const expectedEvidenceType = request.eventType === 'REPAYMENT' ? 1 : 0;
+    let emittedEvidenceId: string | undefined;
+    for (const log of receipt.logs) {
+      if (log.address.toLowerCase() !== config.addresses.uscVerifier.toLowerCase()) continue;
+      try {
+        const parsed = verifierInterface.parseLog({ topics: [...log.topics], data: log.data });
+        if (parsed?.name === 'EvidenceVerified') {
+          emittedEvidenceId = String(parsed.args.evidenceId);
+          if (emittedEvidenceId.toLowerCase() !== expectedEvidenceId) {
+            request.status = 'FAILED';
+            request.error = 'EvidenceVerified event evidence ID does not match completion payload';
+            throw new Error(request.error);
+          }
+          if (String(parsed.args.borrower).toLowerCase() !== request.borrower.toLowerCase()) {
+            request.status = 'FAILED';
+            request.error = 'EvidenceVerified event borrower does not match the request borrower';
+            throw new Error(request.error);
+          }
+          if (Number(parsed.args.chainKey) !== request.chainKey) {
+            request.status = 'FAILED';
+            request.error = 'EvidenceVerified event chain key does not match the request';
+            throw new Error(request.error);
+          }
+          if (Number(parsed.args.evidenceType) !== expectedEvidenceType) {
+            request.status = 'FAILED';
+            request.error = 'EvidenceVerified event type does not match the request';
+            throw new Error(request.error);
+          }
+          if (request.sourceBlock !== undefined && Number(parsed.args.blockHeight) !== request.sourceBlock) {
+            request.status = 'FAILED';
+            request.error = 'EvidenceVerified event block does not match the request';
+            throw new Error(request.error);
+          }
         }
+      } catch (error) {
+        if (error instanceof Error && error.message.startsWith('EvidenceVerified event')) throw error;
+      }
+    }
+    if (!emittedEvidenceId) {
+      request.status = 'FAILED';
+      request.error = 'Creditcoin receipt is missing the USCVerifier EvidenceVerified event';
+      throw new Error(request.error);
     }
 
-    async createVerificationRequest(chainId: string, eventType: string, txHash: string, borrower: string): Promise<string> {
-        // Prevent duplicate txHash submissions (Double-Spend attack on reputation)
-        for (const req of this.requests.values()) {
-            if (req.txHash.toLowerCase() === txHash.toLowerCase()) {
-                throw new Error("Transaction hash already submitted for verification");
-            }
-        }
-
-        const requestId = 'req_' + randomBytes(16).toString('hex');
-        
-        const request: VerificationRequest = {
-            requestId,
-            chainId,
-            eventType,
-            txHash,
-            borrower,
-            status: 'PENDING',
-            timestamp: Date.now()
-        };
-
-        this.requests.set(requestId, request);
-
-        if (this.useRealAttestcoin) {
-            this.processRealVerification(requestId, txHash, chainId).catch(err => {
-                console.error(`USC Verification failed for ${requestId}:`, err);
-                const req = this.requests.get(requestId);
-                if (req) req.status = 'REJECTED';
-            });
-        } else {
-            setTimeout(() => this.processMockVerification(requestId), 2000);
-        }
-
-        return requestId;
+    const verifier = new ethers.Contract(config.addresses.uscVerifier, USC_VERIFIER_ABI, this.creditcoinProvider);
+    const evidence = await verifier.verifiedEvidence(evidenceId);
+    if (String(evidence.borrower).toLowerCase() !== request.borrower.toLowerCase()) {
+      request.status = 'FAILED';
+      request.error = 'Verified evidence borrower does not match the request borrower';
+      throw new Error(request.error);
+    }
+    if (!evidence.active || Number(evidence.chainKey) !== request.chainKey) {
+      request.status = 'FAILED';
+      request.error = 'Verified evidence is inactive or from an unexpected source chain';
+      throw new Error(request.error);
+    }
+    if (Number(evidence.evidenceType) !== expectedEvidenceType) {
+      request.status = 'FAILED';
+      request.error = 'Verified evidence type does not match the request';
+      throw new Error(request.error);
+    }
+    if (request.sourceBlock !== undefined && Number(evidence.blockHeight) !== request.sourceBlock) {
+      request.status = 'FAILED';
+      request.error = 'Verified evidence block does not match the proof request';
+      throw new Error(request.error);
     }
 
-    checkVerificationStatus(requestId: string): VerificationStatus {
-        const req = this.requests.get(requestId);
-        if (!req) throw new Error("Request not found");
-        return req.status;
+    const rawResult = {
+      amount: evidence.amount.toString(),
+      sender: evidence.sender,
+      timestamp: Math.floor(request.createdAt / 1000),
+      evidenceId,
+      verificationContext: evidence.transactionHash,
+      sourceBlock: Number(evidence.blockHeight),
+      sourceChainKey: Number(evidence.chainKey),
+      creditcoinTxHash,
+    };
+    request.feature = evidenceNormalizer.normalizeAndStore(
+      request.borrower,
+      request.requestId,
+      String(request.chainId),
+      request.eventType,
+      request.txHash,
+      rawResult,
+    );
+    request.status = 'VERIFIED';
+    return request.feature;
+  }
+
+  private async prepareProof(requestId: string): Promise<void> {
+    const request = this.get(requestId);
+    try {
+      if (!this.sourceProvider) throw new Error('SOURCE_CHAIN_RPC_URL is required for live verification');
+      const sourceTx = await this.sourceProvider.getTransaction(request.txHash);
+      if (!sourceTx || sourceTx.blockNumber === null) throw new Error('Source transaction is not mined');
+      request.sourceBlock = sourceTx.blockNumber;
+      request.status = 'PROOF_GENERATING';
+
+      const builder = new proofProvider.service.ProofBuilder(
+        request.chainKey,
+        config.proofBuilderUrl,
+        Number(process.env.ATTESTCOIN_HTTP_TIMEOUT_MS || 10_000),
+      );
+      await builder.waitUntilHeightAttested(
+        request.chainKey,
+        request.sourceBlock,
+        Number(process.env.ATTESTCOIN_POLL_INTERVAL_MS || 15_000),
+        Number(process.env.ATTESTCOIN_WAIT_TIMEOUT_MS || 900_000),
+      );
+      const proofResult = await builder.getProof(request.txHash);
+      if (!proofResult.success || !proofResult.data) throw new Error(proofResult.error || 'Proof builder returned no proof');
+
+      request.proof = proofResult.data;
+      request.status = 'PROOF_READY';
+    } catch (error: any) {
+      request.status = 'FAILED';
+      request.error = error.message || 'Proof generation failed';
     }
+  }
 
-    getRequest(requestId: string): VerificationRequest {
-        const req = this.requests.get(requestId);
-        if (!req) throw new Error("Request not found");
-        return req;
-    }
-
-    getVerificationResult(requestId: string): any {
-        const req = this.requests.get(requestId);
-        if (!req) throw new Error("Request not found");
-        if (req.status !== 'CONFIRMED') throw new Error("Verification not confirmed");
-        return req.mockResult;
-    }
-
-    getVerificationProof(requestId: string): any {
-        const req = this.requests.get(requestId);
-        if (!req || req.status !== 'CONFIRMED') return null;
-        return req.proofData;
-    }
-
-    /**
-     * Computes a keccak256 commitment from all CONFIRMED verification requests
-     * for a given borrower. This serves as the real attestcoinContext passed
-     * to the on-chain EligibilityRegistry.
-     */
-    computeEvidenceContext(borrower: string): string {
-        const confirmed = [...this.requests.values()]
-            .filter(r => r.borrower.toLowerCase() === borrower.toLowerCase() && r.status === 'CONFIRMED');
-        if (confirmed.length === 0) return ethers.ZeroHash;
-
-        // Sort by requestId for deterministic ordering
-        confirmed.sort((a, b) => a.requestId.localeCompare(b.requestId));
-
-        // Pack all confirmed evidence into a single commitment
-        const packed = confirmed.map(r => `${r.chainId}:${r.txHash}:${r.eventType}:${r.requestId}`).join('|');
-        return ethers.id(packed); // keccak256 of the packed string
-    }
-
-    private processMockVerification(requestId: string) {
-        const req = this.requests.get(requestId);
-        if (!req) return;
-
-        req.status = 'CONFIRMED';
-        
-        if (req.eventType === 'INFLOW') {
-            req.mockResult = {
-                amount: '1000000000000000000',
-                sender: '0xMockSender',
-                receiver: req.borrower,
-                timestamp: Math.floor(Date.now() / 1000) - 86400
-            };
-        } else if (req.eventType === 'REPAYMENT') {
-            req.mockResult = {
-                amount: '500000000000000000',
-                loanId: 'mock_loan_1',
-                timestamp: Math.floor(Date.now() / 1000) - 172800
-            };
-        } else {
-            req.mockResult = { genericData: true };
-        }
-    }
-
-    private async processRealVerification(requestId: string, txHash: string, sourceChainId: string) {
-        const req = this.requests.get(requestId);
-        if (!req) return;
-
-        try {
-            console.log(`[Attestcoin] Requesting proof for ${txHash} on chain ${sourceChainId}...`);
-            const chainKey = parseInt(sourceChainId, 10) || 1;
-            const PROVER_URL = process.env.CREDITCOIN_PROOF_BUILDER_URL || 'https://prover.cc3-testnet.creditcoin.network/';
-            
-            // Build the proof
-            const apiProvider = new proofProvider.service.ProofBuilder(chainKey, PROVER_URL);
-            const proofResult = await apiProvider.getProof(txHash);
-
-            if (!proofResult.success || !proofResult.data) {
-                throw new Error(`Proof generation failed: ${proofResult.error}`);
-            }
-
-            const proofData = proofResult.data;
-
-            // Verify on-chain
-            const prover = new blockProver.PrecompileBlockProver(this.provider);
-            const verificationResult = await prover.verifySingle(
-                proofData.chainKey,
-                proofData.headerNumber,
-                proofData.txBytes,
-                proofData.merkleProof,
-                proofData.continuityProof,
-            );
-
-            if (!verificationResult) {
-                throw new Error("On-chain verification failed via 0x0FD2 precompile");
-            }
-
-            console.log(`[Attestcoin] Proof verified successfully via 0x0FD2 precompile.`);
-
-            // Extract real transaction data from the source chain
-            try {
-                const rpcUrls: Record<string, string> = {
-                    '1': 'https://eth.llamarpc.com',
-                    '137': 'https://polygon.llamarpc.com',
-                    '56': 'https://bsc-dataseed.binance.org/',
-                    '11155111': 'https://rpc.sepolia.org'
-                };
-                
-                const sourceRpc = rpcUrls[sourceChainId] || 'https://eth.llamarpc.com'; // Default to ETH
-                const sourceProvider = new ethers.JsonRpcProvider(sourceRpc);
-                
-                const receipt = await sourceProvider.getTransactionReceipt(txHash);
-                if (!receipt) throw new Error("Transaction receipt not found on source chain");
-                
-                const block = await sourceProvider.getBlock(receipt.blockNumber);
-                
-                // ERC20 Transfer Signature: Transfer(address indexed from, address indexed to, uint256 value)
-                // Topic0: 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
-                const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
-                
-                let foundAmount = '0';
-                let foundSender = '0xUnknown';
-                let foundReceiver = req.borrower;
-                
-                for (const log of receipt.logs) {
-                    if (log.topics[0] === transferTopic) {
-                        const from = ethers.getAddress('0x' + log.topics[1].slice(26));
-                        const to = ethers.getAddress('0x' + log.topics[2].slice(26));
-                        if (to.toLowerCase() === req.borrower.toLowerCase()) {
-                            foundAmount = BigInt(log.data).toString();
-                            foundSender = from;
-                            foundReceiver = to;
-                            break; // Stop at first matching transfer to borrower
-                        }
-                    }
-                }
-
-                req.status = 'CONFIRMED';
-                req.proofData = proofData;
-                
-                if (req.eventType === 'INFLOW') {
-                    req.mockResult = {
-                        amount: foundAmount,
-                        sender: foundSender,
-                        receiver: foundReceiver,
-                        timestamp: block ? block.timestamp : Math.floor(Date.now() / 1000)
-                    };
-                } else if (req.eventType === 'REPAYMENT') {
-                    // For repayment, it might not be a direct transfer to the borrower, 
-                    // but we just pass the extracted data
-                    req.mockResult = {
-                        amount: foundAmount,
-                        loanId: 'verified_loan_1',
-                        timestamp: block ? block.timestamp : Math.floor(Date.now() / 1000)
-                    };
-                }
-            } catch (parseError) {
-                console.warn(`[Attestcoin] Could not parse source tx logs, falling back to basic data.`, parseError);
-                req.status = 'CONFIRMED';
-                req.proofData = proofData;
-                req.mockResult = {
-                    amount: '1000000000000000000',
-                    sender: '0xParseErrorFallback',
-                    receiver: req.borrower,
-                    timestamp: Math.floor(Date.now() / 1000)
-                };
-            }
-        } catch (error) {
-            req.status = 'REJECTED';
-            throw error;
-        }
-    }
+  static getVerifierPrecompile(): string {
+    return blockProver.BLOCK_PROVER_PRECOMPILE_ADDRESS;
+  }
 }
 
 export const attestcoinService = new AttestcoinService();

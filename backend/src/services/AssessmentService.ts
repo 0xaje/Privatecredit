@@ -3,164 +3,79 @@ import { snapshotService } from './SnapshotService';
 import { policyEngine, PolicyOutput, riskTierToEnum } from '../policy/PolicyEngine';
 import { graphStore } from './GraphStore';
 import { CreditFeature } from './EvidenceNormalizer';
-import { attestcoinService } from './AttestcoinService';
+import { config } from '../config';
 
-const USE_REAL_NETWORK = process.env.USE_REAL_NETWORK === 'true';
-const RPC_URL = USE_REAL_NETWORK 
-    ? (process.env.CREDITCOIN_RPC_URL || 'https://rpc.cc3-testnet.creditcoin.network') 
-    : 'http://127.0.0.1:8545';
-
-// Hardhat Account #0 private key (the deployer/registrar) for mock, else use real env
-const DEPLOYER_PK = USE_REAL_NETWORK 
-    ? process.env.DEPLOYER_PRIVATE_KEY! 
-    : '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
-
-// Note: Ensure this matches the latest local deployment address when mocking
-const ELIGIBILITY_REGISTRY_ADDRESS = process.env.ELIGIBILITY_REGISTRY_ADDRESS || '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
-
-// Minimal ABI required for registration and reading
+const USC_VERIFIER_ABI = [
+  'function registerEligibilityFromEvidence(address borrower,uint8 riskTier,uint256 maxActiveCredit,uint256 maxLtvBps,uint256 validUntil,bytes32[] evidenceIds) external',
+];
 const ELIGIBILITY_ABI = [
-    "function registerEligibility(tuple(uint8 riskTier, uint256 maxActiveCredit, uint256 maxLtvBps, uint256 validUntil, uint256 policyVersion, bytes32 evidenceCommitment) params, uint8 v, bytes32 r, bytes32 s, tuple(uint32 chainKey, uint64 headerNumber, bytes txBytes, bytes merkleProof, bytes continuityProof) proof) external",
-    "function getEligibility(address borrower) external view returns (tuple(address borrower, uint8 riskTier, uint256 maxActiveCredit, uint256 maxLtvBps, uint256 validUntil, uint256 policyVersion, bytes32 evidenceCommitment, bytes32 attestcoinContext, uint256 nonce, bool active))",
-    "function getEligibilityNonce(address borrower) external view returns (uint256)"
+  'function getEligibility(address borrower) external view returns (tuple(address borrower,uint8 riskTier,uint256 maxActiveCredit,uint256 maxLtvBps,uint256 validUntil,uint256 policyVersion,bytes32 evidenceCommitment,bytes32 attestcoinContext,uint256 nonce,bool active))',
 ];
 
+export interface PreparedEligibility extends PolicyOutput {
+  evidenceCommitment: string;
+  evidenceIds: string[];
+  transaction?: { chainId: number; to: string; data: string; value: string };
+}
+
 export class AssessmentService {
-    private provider: ethers.JsonRpcProvider;
-    private registrarWallet: ethers.Wallet;
-    private registryContract: ethers.Contract;
+  private readonly provider = new ethers.JsonRpcProvider(config.rpcUrl);
 
-    constructor() {
-        this.provider = new ethers.JsonRpcProvider(RPC_URL);
-        this.registrarWallet = new ethers.Wallet(DEPLOYER_PK, this.provider);
-        this.registryContract = new ethers.Contract(ELIGIBILITY_REGISTRY_ADDRESS, ELIGIBILITY_ABI, this.registrarWallet);
-    }
+  previewEligibility(borrower: string, nodeIds: string[]): PolicyOutput {
+    const frozenEvidence: CreditFeature[] = nodeIds.map(id => {
+      const node = graphStore.getNode(id);
+      if (!node || node.type !== 'EVIDENCE') throw new Error(`Invalid node ${id}`);
+      return node.data as CreditFeature;
+    });
+    return policyEngine.evaluate({ borrower, frozenEvidence, evidenceCommitment: ethers.ZeroHash });
+  }
 
-    /**
-     * Preview Assessment:
-     * Evaluates policy engine without freezing evidence or registering on-chain.
-     */
-    previewEligibility(borrower: string, nodeIds: string[]): PolicyOutput {
-        const frozenEvidence: CreditFeature[] = nodeIds.map(id => {
-            const node = graphStore.getNode(id);
-            if (!node || node.type !== 'EVIDENCE') throw new Error(`Invalid node ${id}`);
-            return node.data as CreditFeature;
-        });
+  async prepareEligibility(borrower: string, nodeIds: string[]): Promise<PreparedEligibility> {
+    if (!ethers.isAddress(borrower)) throw new Error('Borrower must be a valid address');
+    const evidenceCommitment = snapshotService.freezeEvidenceSet(borrower, nodeIds);
+    const evidenceIds = snapshotService.getEvidenceIds(borrower, nodeIds);
+    const frozenEvidence: CreditFeature[] = snapshotService
+      .getVerifiedEvidence(borrower, nodeIds)
+      .map(node => node.data as CreditFeature);
+    const policyOutput = policyEngine.evaluate({ borrower, frozenEvidence, evidenceCommitment });
 
-        // Use a dummy commitment for preview
-        const dummyCommitment = ethers.ZeroHash;
+    const output: PreparedEligibility = { ...policyOutput, evidenceCommitment, evidenceIds };
+    if (policyOutput.riskTier === 'REJECTED') return output;
+    if (!config.addresses.uscVerifier) throw new Error('USC_VERIFIER_ADDR is required to prepare official eligibility');
 
-        return policyEngine.evaluate({
-            borrower,
-            frozenEvidence,
-            evidenceCommitment: dummyCommitment
-        });
-    }
+    const iface = new ethers.Interface(USC_VERIFIER_ABI);
+    output.transaction = {
+      chainId: config.chainId,
+      to: config.addresses.uscVerifier,
+      data: iface.encodeFunctionData('registerEligibilityFromEvidence', [
+        borrower,
+        riskTierToEnum(policyOutput.riskTier),
+        policyOutput.maxActiveCredit,
+        policyOutput.maxLtvBps,
+        policyOutput.validUntil,
+        evidenceIds,
+      ]),
+      value: '0',
+    };
+    return output;
+  }
 
-    /**
-     * Complete Assessment Flow:
-     * 1. Freeze Evidence
-     * 2. Run Policy Engine
-     * 3. Register on-chain
-     */
-    async requestEligibility(borrower: string, nodeIds: string[]): Promise<any> {
-        // 1. Freeze Evidence (throws if unverified nodes are passed)
-        const commitment = snapshotService.freezeEvidenceSet(borrower, nodeIds);
-
-        // Fetch the node data to pass to policy engine
-        const frozenEvidence: CreditFeature[] = nodeIds.map(id => {
-            const node = graphStore.getNode(id);
-            if (!node || node.type !== 'EVIDENCE') throw new Error(`Invalid node ${id}`);
-            return node.data as CreditFeature;
-        });
-
-        // 2. Score
-        const policyOutput = policyEngine.evaluate({
-            borrower,
-            frozenEvidence,
-            evidenceCommitment: commitment
-        });
-
-        // If rejected, don't register on chain
-        if (policyOutput.riskTier === 'REJECTED') {
-            return { policyOutput };
-        }
-
-        const riskTierEnum = riskTierToEnum(policyOutput.riskTier);
-        
-        // 1. Get Attestcoin Proof Data from the mock/real attestcoin service
-        let proof = {
-            chainKey: 0,
-            headerNumber: 0,
-            txBytes: "0x",
-            merkleProof: "0x",
-            continuityProof: "0x"
-        };
-        
-        // Try to find a real proof from the evidence nodes
-        for (const feature of frozenEvidence) {
-            if (feature.attestcoinRef) {
-                const realProof = attestcoinService.getVerificationProof(feature.attestcoinRef);
-                if (realProof) {
-                    proof = realProof;
-                    break; // use the first valid real proof we find
-                }
-            }
-        }
-
-        // 2. Generate EIP-191 Signature
-        const nonce = await this.registryContract.getEligibilityNonce(borrower);
-        const nextNonce = nonce + 1n;
-        const network = await this.provider.getNetwork();
-        const chainId = network.chainId;
-
-        const messageHash = ethers.keccak256(
-            ethers.solidityPacked(
-                ['address', 'uint8', 'uint256', 'uint256', 'uint256', 'uint256', 'bytes32', 'uint256', 'uint256', 'address'],
-                [borrower, riskTierEnum, policyOutput.maxActiveCredit, policyOutput.maxLtvBps, policyOutput.validUntil, policyOutput.policyVersion, commitment, nextNonce, chainId, ELIGIBILITY_REGISTRY_ADDRESS]
-            )
-        );
-
-        const signature = await this.registrarWallet.signMessage(ethers.getBytes(messageHash));
-        const sig = ethers.Signature.from(signature);
-
-        return {
-            policyOutput,
-            registrationData: {
-                params: {
-                    riskTier: riskTierEnum,
-                    maxActiveCredit: policyOutput.maxActiveCredit,
-                    maxLtvBps: policyOutput.maxLtvBps,
-                    validUntil: policyOutput.validUntil,
-                    policyVersion: policyOutput.policyVersion,
-                    evidenceCommitment: commitment
-                },
-                v: sig.v,
-                r: sig.r,
-                s: sig.s,
-                proof
-            }
-        };
-    }
-
-    /**
-     * Get Official Eligibility from on-chain registry
-     */
-    async getEligibility(borrower: string): Promise<any> {
-        const eligibility = await this.registryContract.getEligibility(borrower);
-        return {
-            borrower: eligibility.borrower,
-            riskTier: Number(eligibility.riskTier),
-            maxActiveCredit: eligibility.maxActiveCredit.toString(),
-            maxLtvBps: eligibility.maxLtvBps.toString(),
-            validUntil: eligibility.validUntil.toString(),
-            policyVersion: eligibility.policyVersion.toString(),
-            evidenceCommitment: eligibility.evidenceCommitment,
-            attestcoinContext: eligibility.attestcoinContext,
-            nonce: eligibility.nonce.toString(),
-            active: eligibility.active
-        };
-    }
+  async getEligibility(borrower: string): Promise<any> {
+    const contract = new ethers.Contract(config.addresses.eligibilityRegistry, ELIGIBILITY_ABI, this.provider);
+    const eligibility = await contract.getEligibility(borrower);
+    return {
+      borrower: eligibility.borrower,
+      riskTier: Number(eligibility.riskTier),
+      maxActiveCredit: eligibility.maxActiveCredit.toString(),
+      maxLtvBps: eligibility.maxLtvBps.toString(),
+      validUntil: eligibility.validUntil.toString(),
+      policyVersion: eligibility.policyVersion.toString(),
+      evidenceCommitment: eligibility.evidenceCommitment,
+      attestcoinContext: eligibility.attestcoinContext,
+      nonce: eligibility.nonce.toString(),
+      active: eligibility.active,
+    };
+  }
 }
 
 export const assessmentService = new AssessmentService();

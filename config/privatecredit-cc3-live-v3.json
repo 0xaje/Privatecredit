@@ -1,0 +1,16 @@
+{
+  "deploymentId": "privatecredit-cc3-live-v3",
+  "network": "creditcoinTestnet",
+  "chainId": 102031,
+  "rpcUrl": "https://rpc.cc3-testnet.creditcoin.network",
+  "contracts": {
+    "eligibilityRegistry": "0x24Df48F5016D692F29ecC2e535cf8EF0167A41D0",
+    "evmV1Decoder": "0x210C435800c89d042C2f06225aCA9758d193fCc5",
+    "repaymentRegistry": "0xa04B661E2D20AB6D9e7B701d68FffB149Bf84b44",
+    "artefactRegistry": "0xB380Eb47265578516a15D78261d467441c3e6fbC",
+    "capacityManager": "0xD8bBE9FA9544C8B53A7D1F0b3333cC130999e7a8",
+    "uscVerifier": "0xFE502a51765a219b76a4Ed3Ba7899c43436e4399",
+    "loanVault": "0x17ed968E4a58e7C8Fd6e8d79Bc77cC890BBf2104",
+    "loanMarketplace": "0x19669e21921FF8787f9e0daDD10a87F1d6CB1d8b"
+  }
+}

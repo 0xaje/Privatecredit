@@ -10,13 +10,14 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface ArtefactRegistryInterface extends Interface {
-    getFunction(nameOrSignature: "artefacts" | "commitArtefact" | "creatorArtefacts" | "getArtefact" | "getArtefactsByCreator" | "verifyArtefact"): FunctionFragment;
+    getFunction(nameOrSignature: "artefacts" | "commitArtefact" | "creatorArtefacts" | "eligibilityRegistry" | "getArtefact" | "getArtefactsByCreator" | "verifyArtefact"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "ArtefactCommitted" | "ArtefactVerified"): EventFragment;
 
     encodeFunctionData(functionFragment: 'artefacts', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'commitArtefact', values: [BytesLike, BigNumberish, BytesLike, string]): string;
 encodeFunctionData(functionFragment: 'creatorArtefacts', values: [AddressLike, BigNumberish]): string;
+encodeFunctionData(functionFragment: 'eligibilityRegistry', values?: undefined): string;
 encodeFunctionData(functionFragment: 'getArtefact', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'getArtefactsByCreator', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'verifyArtefact', values: [BytesLike, BytesLike]): string;
@@ -24,6 +25,7 @@ encodeFunctionData(functionFragment: 'verifyArtefact', values: [BytesLike, Bytes
     decodeFunctionResult(functionFragment: 'artefacts', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'commitArtefact', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'creatorArtefacts', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'eligibilityRegistry', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getArtefact', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getArtefactsByCreator', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'verifyArtefact', data: BytesLike): Result;
@@ -112,6 +114,14 @@ decodeFunctionResult(functionFragment: 'verifyArtefact', data: BytesLike): Resul
     
 
     
+    eligibilityRegistry: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
     getArtefact: TypedContractMethod<
       [artefactId: BytesLike, ],
       [ArtefactStructOutput],
@@ -150,6 +160,11 @@ getFunction(nameOrSignature: 'commitArtefact'): TypedContractMethod<
     >;
 getFunction(nameOrSignature: 'creatorArtefacts'): TypedContractMethod<
       [arg0: AddressLike, arg1: BigNumberish, ],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'eligibilityRegistry'): TypedContractMethod<
+      [],
       [string],
       'view'
     >;

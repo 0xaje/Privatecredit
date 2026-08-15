@@ -3,43 +3,33 @@ import { assessmentService } from '../services/AssessmentService';
 
 export const assessmentRouter = Router();
 
-// Request Eligibility (runs Policy Engine and registers on-chain)
-assessmentRouter.post('/request', async (req: Request, res: Response) => {
-    try {
-        const { borrower, nodeIds } = req.body;
-        if (!borrower || !Array.isArray(nodeIds)) {
-            return res.status(400).json({ error: "borrower and nodeIds[] required" });
-        }
-
-        const { policyOutput, registrationData } = await assessmentService.requestEligibility(borrower, nodeIds);
-        res.json({ success: true, policy: policyOutput, registrationData });
-    } catch (e: any) {
-        res.status(500).json({ error: e.message });
-    }
+assessmentRouter.post('/preview', (req: Request, res: Response) => {
+  try {
+    const { borrower, nodeIds } = req.body;
+    if (!borrower || !Array.isArray(nodeIds)) throw new Error('borrower and nodeIds[] required');
+    const policy = assessmentService.previewEligibility(borrower, nodeIds);
+    res.json({ success: true, policy, mutatesOnchain: false });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
 });
 
-// Preview Eligibility (runs Policy Engine without registering on-chain)
-assessmentRouter.post('/preview', async (req: Request, res: Response) => {
-    try {
-        const { borrower, nodeIds } = req.body;
-        if (!borrower || !Array.isArray(nodeIds)) {
-            return res.status(400).json({ error: "borrower and nodeIds[] required" });
-        }
-
-        const policyOutput = assessmentService.previewEligibility(borrower, nodeIds);
-        res.json({ success: true, policy: policyOutput });
-    } catch (e: any) {
-        res.status(500).json({ error: e.message });
-    }
+assessmentRouter.post('/prepare', async (req: Request, res: Response) => {
+  try {
+    const { borrower, nodeIds } = req.body;
+    if (!borrower || !Array.isArray(nodeIds)) throw new Error('borrower and nodeIds[] required');
+    const prepared = await assessmentService.prepareEligibility(borrower, nodeIds);
+    res.json({ success: true, policy: prepared, transaction: prepared.transaction });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
 });
 
-// Get Official Eligibility
 assessmentRouter.get('/eligibility/:address', async (req: Request, res: Response) => {
-    try {
-        const borrower = req.params.address as string;
-        const eligibility = await assessmentService.getEligibility(borrower);
-        res.json({ success: true, eligibility });
-    } catch (e: any) {
-        res.status(500).json({ error: e.message });
-    }
+  try {
+    const eligibility = await assessmentService.getEligibility(req.params.address as string);
+    res.json({ success: true, eligibility });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });

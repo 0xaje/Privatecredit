@@ -8,14 +8,17 @@ import "../interfaces/IEligibilityRegistry.sol";
 
 contract CapacityManager is Ownable, ICapacityManager {
     mapping(address => uint256) private _usedCapacity;
-    IEligibilityRegistry public eligibilityRegistry;
+    mapping(address => uint256) private _defaultedLockedCapacity;
+    IEligibilityRegistry public immutable eligibilityRegistry;
     mapping(address => bool) public authorizedCallers;
 
     constructor(address _eligibilityRegistry) Ownable(msg.sender) {
+        require(_eligibilityRegistry != address(0), "zero eligibility registry");
         eligibilityRegistry = IEligibilityRegistry(_eligibilityRegistry);
     }
 
     function setAuthorizedCaller(address caller, bool authorized) external onlyOwner {
+        require(caller != address(0), "zero caller");
         authorizedCallers[caller] = authorized;
     }
 
@@ -28,11 +31,9 @@ contract CapacityManager is Ownable, ICapacityManager {
      * @notice Reserves capacity for a borrower
      */
     function reserveCapacity(address borrower, uint256 amount) external onlyAuthorized {
+        if (borrower == address(0) || amount == 0) revert InvalidEligibility();
         if (!eligibilityRegistry.isEligibilityValid(borrower)) revert InvalidEligibility();
-        
-        uint256 available = availableCapacity(borrower);
-        if (amount > available) revert ExceedsAvailableCapacity();
-
+        if (amount > availableCapacity(borrower)) revert ExceedsAvailableCapacity();
         _usedCapacity[borrower] += amount;
         emit CapacityReserved(borrower, amount);
     }
@@ -41,38 +42,48 @@ contract CapacityManager is Ownable, ICapacityManager {
      * @notice Releases previously reserved capacity
      */
     function releaseCapacity(address borrower, uint256 amount) external onlyAuthorized {
-        if (_usedCapacity[borrower] < amount) {
-            _usedCapacity[borrower] = 0;
-        } else {
-            _usedCapacity[borrower] -= amount;
-        }
+        if (amount == 0 || amount > _usedCapacity[borrower]) revert InvalidCapacityRelease();
+        _usedCapacity[borrower] -= amount;
         emit CapacityReleased(borrower, amount);
     }
 
-    /**
-     * @notice Calculates the available capacity for a borrower
-     */
-    function availableCapacity(address borrower) public view returns (uint256) {
-        if (!eligibilityRegistry.isEligibilityValid(borrower)) return 0;
-        
-        Eligibility memory e = eligibilityRegistry.getEligibility(borrower);
-        uint256 used = _usedCapacity[borrower];
-        
-        if (used >= e.maxActiveCredit) return 0;
-        return e.maxActiveCredit - used;
+    function lockDefaultedCapacity(address borrower, uint256 amount) external onlyAuthorized {
+        if (amount == 0 || amount > _usedCapacity[borrower]) revert InvalidCapacityRelease();
+        _usedCapacity[borrower] -= amount;
+        _defaultedLockedCapacity[borrower] += amount;
+        emit DefaultCapacityLocked(borrower, amount);
     }
 
     /**
-     * @notice Gets the total used capacity for a borrower
+     * @notice Calculates the available capacity for a borrower, excluding defaulted locked exposure.
+     */
+    function availableCapacity(address borrower) public view returns (uint256) {
+        if (!eligibilityRegistry.isEligibilityValid(borrower)) return 0;
+        Eligibility memory e = eligibilityRegistry.getEligibility(borrower);
+        uint256 consumed = _usedCapacity[borrower] + _defaultedLockedCapacity[borrower];
+        if (consumed >= e.maxActiveCredit) return 0;
+        return e.maxActiveCredit - consumed;
+    }
+
+    /**
+     * @notice Gets the total actively reserved capacity for a borrower.
      */
     function getUsedCapacity(address borrower) external view returns (uint256) {
         return _usedCapacity[borrower];
     }
 
+    function getDefaultedLockedCapacity(address borrower) external view returns (uint256) {
+        return _defaultedLockedCapacity[borrower];
+    }
+
+    function getTotalConsumedCapacity(address borrower) external view returns (uint256) {
+        return _usedCapacity[borrower] + _defaultedLockedCapacity[borrower];
+    }
+
     /**
-     * @notice Checks if a borrower can borrow a specific amount
+     * @notice Checks if a borrower can borrow a specific amount.
      */
     function canBorrow(address borrower, uint256 amount) external view returns (bool) {
-        return availableCapacity(borrower) >= amount;
+        return amount > 0 && availableCapacity(borrower) >= amount;
     }
 }

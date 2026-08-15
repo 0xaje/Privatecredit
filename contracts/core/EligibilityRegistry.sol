@@ -12,13 +12,13 @@ contract EligibilityRegistry is Ownable, Pausable, IEligibilityRegistry {
     mapping(address => uint256) public nonces;
     address public registrar;
 
+    error InvalidPolicy();
+    error ZeroBorrower();
+
     constructor() Ownable(msg.sender) {}
 
-    /**
-     * @notice Sets the registrar address
-     * @param _registrar The new registrar address
-     */
     function setRegistrar(address _registrar) external onlyOwner {
+        require(_registrar != address(0), "zero registrar");
         registrar = _registrar;
     }
 
@@ -27,95 +27,61 @@ contract EligibilityRegistry is Ownable, Pausable, IEligibilityRegistry {
         _;
     }
 
-    /**
-     * @notice Registers a new eligibility for a borrower. Verifies Attestcoin Proof on-chain.
-     * @param params The eligibility parameters assigned by the registrar
-     * @param v ECDSA signature v
-     * @param r ECDSA signature r
-     * @param s ECDSA signature s
-     * @param proof The Attestcoin proof data
-     */
     function registerEligibility(
-        EligibilityParams calldata params,
-        uint8 v, bytes32 r, bytes32 s,
-        AttestcoinProof calldata proof
-    ) external whenNotPaused {
-        address borrower = msg.sender;
-        
-        // 1. Verify Registrar Signature
-        require(registrar != address(0), "Registrar not set");
-        
-        uint256 nonce = nonces[borrower] + 1;
-        bytes32 messageHash = keccak256(abi.encodePacked(
-            borrower, params.riskTier, params.maxActiveCredit, params.maxLtvBps, params.validUntil, params.policyVersion, params.evidenceCommitment, nonce, block.chainid, address(this)
-        ));
-        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
-        address signer = ecrecover(ethSignedMessageHash, v, r, s);
-        if (signer != registrar) revert UnauthorizedRegistrar();
+        address borrower,
+        RiskTier riskTier,
+        uint256 maxActiveCredit,
+        uint256 maxLtvBps,
+        uint256 validUntil,
+        uint256 policyVersion,
+        bytes32 evidenceCommitment,
+        bytes32 attestcoinContext
+    ) external onlyRegistrar whenNotPaused {
+        if (borrower == address(0)) revert ZeroBorrower();
+        if (maxActiveCredit == 0 || maxLtvBps > PolicyConstants.BPS_DENOMINATOR || validUntil <= block.timestamp) revert InvalidPolicy();
+        if (policyVersion == 0 || evidenceCommitment == bytes32(0) || attestcoinContext == bytes32(0)) revert InvalidPolicy();
 
-        // 2. Verify Attestcoin Proof On-Chain via Precompile (if provided)
-        if (proof.txBytes.length > 0) {
-            (bool success, bytes memory result) = address(0x0FD2).staticcall(
-                abi.encode(proof.chainKey, proof.headerNumber, proof.txBytes, proof.merkleProof, proof.continuityProof)
-            );
-            require(success, "Attestcoin on-chain precompile verification failed");
-            bool isProofValid = abi.decode(result, (bool));
-            require(isProofValid, "Attestcoin proof is invalid");
+        if (riskTier == RiskTier.LOW) {
+            if (maxActiveCredit > PolicyConstants.LOW_RISK_MAX_CREDIT || maxLtvBps > PolicyConstants.LOW_RISK_MAX_LTV_BPS) revert InvalidPolicy();
+        } else if (riskTier == RiskTier.MEDIUM) {
+            if (maxActiveCredit > PolicyConstants.MEDIUM_RISK_MAX_CREDIT || maxLtvBps > PolicyConstants.MEDIUM_RISK_MAX_LTV_BPS) revert InvalidPolicy();
+        } else if (riskTier == RiskTier.HIGH) {
+            if (maxActiveCredit > PolicyConstants.HIGH_RISK_MAX_CREDIT || maxLtvBps > PolicyConstants.HIGH_RISK_MAX_LTV_BPS) revert InvalidPolicy();
+        } else {
+            revert InvalidPolicy();
         }
 
-        nonces[borrower] = nonce;
-        
+        uint256 nonce = ++nonces[borrower];
         eligibilities[borrower] = Eligibility({
             borrower: borrower,
-            riskTier: params.riskTier,
-            maxActiveCredit: params.maxActiveCredit,
-            maxLtvBps: params.maxLtvBps,
-            validUntil: params.validUntil,
-            policyVersion: params.policyVersion,
-            evidenceCommitment: params.evidenceCommitment,
-            attestcoinContext: keccak256(proof.txBytes),
+            riskTier: riskTier,
+            maxActiveCredit: maxActiveCredit,
+            maxLtvBps: maxLtvBps,
+            validUntil: validUntil,
+            policyVersion: policyVersion,
+            evidenceCommitment: evidenceCommitment,
+            attestcoinContext: attestcoinContext,
             nonce: nonce,
             active: true
         });
-
         emit EligibilityRegistered(borrower, nonce);
     }
 
-    /**
-     * @notice Revokes an active eligibility
-     * @param borrower The borrower address
-     */
     function revokeEligibility(address borrower) external {
         if (msg.sender != registrar && msg.sender != owner()) revert UnauthorizedRegistrar();
-        
         eligibilities[borrower].active = false;
         emit EligibilityRevoked(borrower, eligibilities[borrower].nonce);
     }
 
-    /**
-     * @notice Retrieves the eligibility data for a borrower
-     * @param borrower The borrower address
-     * @return The Eligibility struct
-     */
     function getEligibility(address borrower) external view returns (Eligibility memory) {
         return eligibilities[borrower];
     }
 
-    /**
-     * @notice Checks if the eligibility for a borrower is valid
-     * @param borrower The borrower address
-     * @return True if valid, false otherwise
-     */
     function isEligibilityValid(address borrower) external view returns (bool) {
         Eligibility storage e = eligibilities[borrower];
         return e.active && block.timestamp < e.validUntil;
     }
 
-    /**
-     * @notice Retrieves the current eligibility nonce for a borrower
-     * @param borrower The borrower address
-     * @return The nonce
-     */
     function getEligibilityNonce(address borrower) external view returns (uint256) {
         return nonces[borrower];
     }

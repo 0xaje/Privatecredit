@@ -1,41 +1,91 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 export default buildModule("PrivateCreditModule", (m) => {
-  // 1. Deploy Registries
   const eligibilityRegistry = m.contract("EligibilityRegistry");
-  const repaymentRegistry = m.contract("RepaymentRegistry");
-  const artefactRegistry = m.contract("ArtefactRegistry");
+  const evmV1Decoder = m.library("EvmV1Decoder", {
+    after: [eligibilityRegistry],
+  });
+  const repaymentRegistry = m.contract("RepaymentRegistry", [], {
+    after: [evmV1Decoder],
+  });
+  const artefactRegistry = m.contract("ArtefactRegistry", [eligibilityRegistry], {
+    after: [repaymentRegistry],
+  });
+  const capacityManager = m.contract("CapacityManager", [eligibilityRegistry], {
+    after: [artefactRegistry],
+  });
+  const uscVerifier = m.contract("USCVerifier", [eligibilityRegistry], {
+    libraries: { EvmV1Decoder: evmV1Decoder },
+    after: [capacityManager],
+  });
 
-  // 2. Deploy CapacityManager
-  const capacityManager = m.contract("CapacityManager", [eligibilityRegistry]);
-
-  // 3. Deploy LoanVault
-  const loanVault = m.contract("LoanVault", [capacityManager]);
-
-  // 4. Deploy LoanMarketplace
-  const loanMarketplace = m.contract("LoanMarketplace", [
+  const setRegistrar = m.call(
     eligibilityRegistry,
+    "setRegistrar",
+    [uscVerifier],
+    { after: [uscVerifier] },
+  );
+  const loanVault = m.contract("LoanVault", [capacityManager], {
+    after: [setRegistrar],
+  });
+
+  const authorizeLoanVault = m.call(
     capacityManager,
-    loanVault
-  ]);
+    "setAuthorizedCaller",
+    [loanVault, true],
+    {
+      id: "CapacityManagerAuthorizeLoanVault",
+      after: [loanVault],
+    },
+  );
+  const setLoanVaultRepaymentRegistry = m.call(
+    loanVault,
+    "setRepaymentRegistry",
+    [repaymentRegistry],
+    { after: [authorizeLoanVault] },
+  );
+  const setAuthorizedRecorder = m.call(
+    repaymentRegistry,
+    "setAuthorizedRecorder",
+    [loanVault],
+    { after: [setLoanVaultRepaymentRegistry] },
+  );
 
-  // 5. Setup authorization
-  m.call(capacityManager, "setAuthorizedCaller", [loanVault, true]);
-  m.call(loanVault, "setMarketplace", [loanMarketplace]);
-  m.call(loanVault, "setRepaymentRegistry", [repaymentRegistry]);
-  m.call(repaymentRegistry, "setAuthorizedRecorder", [loanVault]);
-  
-  // Also we need to set the backend registrar for the EligibilityRegistry. 
-  // We'll use the deployer account as the registrar for local dev.
-  const deployer = m.getAccount(0);
-  m.call(eligibilityRegistry, "setRegistrar", [deployer]);
+  const loanMarketplace = m.contract(
+    "LoanMarketplace",
+    [eligibilityRegistry, capacityManager, loanVault],
+    { after: [setAuthorizedRecorder] },
+  );
+  const authorizeLoanMarketplace = m.call(
+    capacityManager,
+    "setAuthorizedCaller",
+    [loanMarketplace, true],
+    {
+      id: "CapacityManagerAuthorizeLoanMarketplace",
+      after: [loanMarketplace],
+    },
+  );
+  const setLoanVaultMarketplace = m.call(
+    loanVault,
+    "setMarketplace",
+    [loanMarketplace],
+    { after: [authorizeLoanMarketplace] },
+  );
 
-  return { 
-    eligibilityRegistry, 
-    capacityManager, 
-    loanVault, 
-    loanMarketplace, 
-    repaymentRegistry, 
-    artefactRegistry 
+  return {
+    eligibilityRegistry,
+    evmV1Decoder,
+    repaymentRegistry,
+    artefactRegistry,
+    capacityManager,
+    uscVerifier,
+    loanVault,
+    loanMarketplace,
+    setRegistrar,
+    authorizeLoanVault,
+    setLoanVaultRepaymentRegistry,
+    setAuthorizedRecorder,
+    authorizeLoanMarketplace,
+    setLoanVaultMarketplace,
   };
 });

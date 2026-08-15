@@ -5,7 +5,8 @@ import {Test} from "forge-std/Test.sol";
 import {CapacityManager} from "./core/CapacityManager.sol";
 import {ICapacityManager} from "./interfaces/ICapacityManager.sol";
 import {EligibilityRegistry} from "./core/EligibilityRegistry.sol";
-import {RiskTier, EligibilityParams, AttestcoinProof} from "./libraries/CreditTypes.sol";
+import {RiskTier} from "./libraries/CreditTypes.sol";
+
 contract CapacityManagerTest is Test {
     CapacityManager capacityManager;
     EligibilityRegistry eligibilityRegistry;
@@ -18,68 +19,42 @@ contract CapacityManagerTest is Test {
         vm.startPrank(owner);
         eligibilityRegistry = new EligibilityRegistry();
         capacityManager = new CapacityManager(address(eligibilityRegistry));
-        
         eligibilityRegistry.setRegistrar(registrar);
         capacityManager.setAuthorizedCaller(vault, true);
         vm.stopPrank();
 
-        // 1. Mock the Attestcoin Precompile to always return true for our dummy inputs
-        vm.mockCall(
-            address(0x0FD2),
-            abi.encode(uint64(0), uint64(0), bytes(""), bytes(""), bytes("")),
-            abi.encode(true)
-        );
-
-        // 2. Generate Registrar Signature
-        // We use a dummy private key for the registrar: 0x2
-        uint256 registrarPk = 2;
-        // The registrar address derived from pk 2 is: 0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF
-        // So we need to set the registrar to this address instead of address(2)
-        vm.prank(owner);
-        eligibilityRegistry.setRegistrar(vm.addr(registrarPk));
-
-        bytes32 messageHash = keccak256(abi.encodePacked(
-            borrower, RiskTier.LOW, uint256(5000e18), uint256(6500), block.timestamp + 30 days, uint256(1), bytes32(0), uint256(1), block.chainid, address(eligibilityRegistry)
-        ));
-        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(registrarPk, ethSignedMessageHash);
-
-        // 3. Register eligibility as the borrower
-        vm.prank(borrower);
+        vm.prank(registrar);
         eligibilityRegistry.registerEligibility(
-            EligibilityParams({
-                riskTier: RiskTier.LOW,
-                maxActiveCredit: 5000e18,
-                maxLtvBps: 6500,
-                validUntil: block.timestamp + 30 days,
-                policyVersion: 1,
-                evidenceCommitment: bytes32(0)
-            }),
-            v, r, s,
-            AttestcoinProof({
-                chainKey: 0,
-                headerNumber: 0,
-                txBytes: bytes(""),
-                merkleProof: bytes(""),
-                continuityProof: bytes("")
-            })
+            borrower,
+            RiskTier.LOW,
+            5000e18,
+            6500,
+            block.timestamp + 30 days,
+            1,
+            keccak256("evidence"),
+            keccak256("context")
         );
     }
 
     function test_AvailableCapacityIsMaxCredit() public view {
-        uint256 available = capacityManager.availableCapacity(borrower);
-        assertEq(available, 5000e18);
+        assertEq(capacityManager.availableCapacity(borrower), 5000e18);
     }
 
     function test_ReserveCapacityDecreasesAvailable() public {
         vm.prank(vault);
         capacityManager.reserveCapacity(borrower, 1000e18);
-        
-        uint256 available = capacityManager.availableCapacity(borrower);
-        assertEq(available, 4000e18);
-        
-        uint256 used = capacityManager.getUsedCapacity(borrower);
-        assertEq(used, 1000e18);
+        assertEq(capacityManager.availableCapacity(borrower), 4000e18);
+        assertEq(capacityManager.getUsedCapacity(borrower), 1000e18);
+    }
+
+    function test_DefaultedCapacityRemainsLocked() public {
+        vm.startPrank(vault);
+        capacityManager.reserveCapacity(borrower, 1000e18);
+        capacityManager.lockDefaultedCapacity(borrower, 1000e18);
+        vm.stopPrank();
+        assertEq(capacityManager.getUsedCapacity(borrower), 0);
+        assertEq(capacityManager.getDefaultedLockedCapacity(borrower), 1000e18);
+        assertEq(capacityManager.availableCapacity(borrower), 4000e18);
     }
 
     function test_CannotReserveMoreThanAvailable() public {

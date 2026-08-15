@@ -6,15 +6,18 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface CapacityManagerInterface extends Interface {
-    getFunction(nameOrSignature: "authorizedCallers" | "availableCapacity" | "canBorrow" | "eligibilityRegistry" | "getUsedCapacity" | "owner" | "releaseCapacity" | "renounceOwnership" | "reserveCapacity" | "setAuthorizedCaller" | "transferOwnership"): FunctionFragment;
+    getFunction(nameOrSignature: "authorizedCallers" | "availableCapacity" | "canBorrow" | "eligibilityRegistry" | "getDefaultedLockedCapacity" | "getTotalConsumedCapacity" | "getUsedCapacity" | "lockDefaultedCapacity" | "owner" | "releaseCapacity" | "renounceOwnership" | "reserveCapacity" | "setAuthorizedCaller" | "transferOwnership"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "CapacityReleased" | "CapacityReserved" | "OwnershipTransferred"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "CapacityReleased" | "CapacityReserved" | "DefaultCapacityLocked" | "OwnershipTransferred"): EventFragment;
 
     encodeFunctionData(functionFragment: 'authorizedCallers', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'availableCapacity', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'canBorrow', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'eligibilityRegistry', values?: undefined): string;
+encodeFunctionData(functionFragment: 'getDefaultedLockedCapacity', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'getTotalConsumedCapacity', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'getUsedCapacity', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'lockDefaultedCapacity', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'releaseCapacity', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
@@ -26,7 +29,10 @@ encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike])
 decodeFunctionResult(functionFragment: 'availableCapacity', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'canBorrow', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'eligibilityRegistry', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getDefaultedLockedCapacity', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getTotalConsumedCapacity', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getUsedCapacity', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'lockDefaultedCapacity', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'releaseCapacity', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
@@ -49,6 +55,18 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
   
 
     export namespace CapacityReservedEvent {
+      export type InputTuple = [borrower: AddressLike, amount: BigNumberish];
+      export type OutputTuple = [borrower: string, amount: bigint];
+      export interface OutputObject {borrower: string, amount: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace DefaultCapacityLockedEvent {
       export type InputTuple = [borrower: AddressLike, amount: BigNumberish];
       export type OutputTuple = [borrower: string, amount: bigint];
       export interface OutputObject {borrower: string, amount: bigint };
@@ -138,10 +156,34 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
 
     
+    getDefaultedLockedCapacity: TypedContractMethod<
+      [borrower: AddressLike, ],
+      [bigint],
+      'view'
+    >
+    
+
+    
+    getTotalConsumedCapacity: TypedContractMethod<
+      [borrower: AddressLike, ],
+      [bigint],
+      'view'
+    >
+    
+
+    
     getUsedCapacity: TypedContractMethod<
       [borrower: AddressLike, ],
       [bigint],
       'view'
+    >
+    
+
+    
+    lockDefaultedCapacity: TypedContractMethod<
+      [borrower: AddressLike, amount: BigNumberish, ],
+      [void],
+      'nonpayable'
     >
     
 
@@ -216,10 +258,25 @@ getFunction(nameOrSignature: 'eligibilityRegistry'): TypedContractMethod<
       [string],
       'view'
     >;
+getFunction(nameOrSignature: 'getDefaultedLockedCapacity'): TypedContractMethod<
+      [borrower: AddressLike, ],
+      [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getTotalConsumedCapacity'): TypedContractMethod<
+      [borrower: AddressLike, ],
+      [bigint],
+      'view'
+    >;
 getFunction(nameOrSignature: 'getUsedCapacity'): TypedContractMethod<
       [borrower: AddressLike, ],
       [bigint],
       'view'
+    >;
+getFunction(nameOrSignature: 'lockDefaultedCapacity'): TypedContractMethod<
+      [borrower: AddressLike, amount: BigNumberish, ],
+      [void],
+      'nonpayable'
     >;
 getFunction(nameOrSignature: 'owner'): TypedContractMethod<
       [],
@@ -254,6 +311,7 @@ getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<
 
     getEvent(key: 'CapacityReleased'): TypedContractEvent<CapacityReleasedEvent.InputTuple, CapacityReleasedEvent.OutputTuple, CapacityReleasedEvent.OutputObject>;
 getEvent(key: 'CapacityReserved'): TypedContractEvent<CapacityReservedEvent.InputTuple, CapacityReservedEvent.OutputTuple, CapacityReservedEvent.OutputObject>;
+getEvent(key: 'DefaultCapacityLocked'): TypedContractEvent<DefaultCapacityLockedEvent.InputTuple, DefaultCapacityLockedEvent.OutputTuple, DefaultCapacityLockedEvent.OutputObject>;
 getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
 
     filters: {
@@ -264,6 +322,10 @@ getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEv
 
       'CapacityReserved(address,uint256)': TypedContractEvent<CapacityReservedEvent.InputTuple, CapacityReservedEvent.OutputTuple, CapacityReservedEvent.OutputObject>;
       CapacityReserved: TypedContractEvent<CapacityReservedEvent.InputTuple, CapacityReservedEvent.OutputTuple, CapacityReservedEvent.OutputObject>;
+    
+
+      'DefaultCapacityLocked(address,uint256)': TypedContractEvent<DefaultCapacityLockedEvent.InputTuple, DefaultCapacityLockedEvent.OutputTuple, DefaultCapacityLockedEvent.OutputObject>;
+      DefaultCapacityLocked: TypedContractEvent<DefaultCapacityLockedEvent.InputTuple, DefaultCapacityLockedEvent.OutputTuple, DefaultCapacityLockedEvent.OutputObject>;
     
 
       'OwnershipTransferred(address,address)': TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;

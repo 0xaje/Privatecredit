@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Activity, LayoutDashboard, Shield, User, Plus, Zap, X } from 'lucide-react';
+import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
+import { Interface } from 'ethers';
+import { Activity, LayoutDashboard, Shield, User, Plus, Zap, X, AlertTriangle } from 'lucide-react';
 import type { Node } from 'reactflow';
-import { createAppKit, useAppKit, useAppKitAccount } from '@reown/appkit/react';
-import { EthersAdapter } from '@reown/appkit-adapter-ethers';
-import { creditCoin3Testnet, mainnet } from '@reown/appkit/networks';
 import GraphCanvas from './components/GraphCanvas';
 import Inspector from './components/Inspector';
 import ReputationView from './views/ReputationView';
@@ -11,30 +10,22 @@ import LoansView from './views/LoansView';
 import JudgeView from './views/JudgeView';
 import { api } from './api/client';
 import './App.css';
-
-// Reown AppKit setup
-const projectId = 'b56e18d47c72ab683b108171285093e2'; // Replace with your Reown Project ID
-
-const appKit = createAppKit({
-  adapters: [new EthersAdapter()],
-  networks: [creditCoin3Testnet, mainnet],
-  metadata: {
-    name: 'PrivateCredit Graph',
-    description: 'PrivateCredit Integration with Creditcoin',
-    url: 'https://privatecredit.app',
-    icons: ['https://avatars.githubusercontent.com/u/37784886']
-  },
-  projectId,
-  features: { analytics: false }
-});
+import { appKit } from './appkit';
+import { useCreditcoinWallet } from './wallet';
 
 function App() {
   const [activeView, setActiveView] = useState('overview');
+  const { address, isConnected } = useAppKitAccount();
+  const { open } = useAppKit();
+  const wallet = address || null;
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [judgeMode, setJudgeMode] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [showAddEvidence, setShowAddEvidence] = useState(false);
   const [evidenceNodeIds, setEvidenceNodeIds] = useState<string[]>([]);
+  const [walletError, setWalletError] = useState<string | null>(null);
+
+  // Bottom bar live data
   const [insightScore, setInsightScore] = useState<number | null>(null);
   const [capacity, setCapacity] = useState<{ available: string; used: string } | null>(null);
 
@@ -42,15 +33,17 @@ function App() {
     setRefreshTrigger(t => t + 1);
   }, []);
 
-  const { address: wallet, isConnected } = useAppKitAccount();
-  const { open: openAppKit } = useAppKit();
-
-  const handleConnect = () => {
-    openAppKit();
+  const handleConnect = async () => {
+    setWalletError(null);
+    try {
+      await open();
+    } catch (error: any) {
+      setWalletError(error.message || 'Wallet connection failed.');
+    }
   };
 
-  const handleDisconnect = () => {
-    appKit.disconnect();
+  const handleDisconnect = async () => {
+    await appKit.disconnect('eip155');
     setSelectedNode(null);
     setEvidenceNodeIds([]);
     setInsightScore(null);
@@ -58,18 +51,6 @@ function App() {
     setJudgeMode(false);
     setActiveView('overview');
   };
-
-  // When wallet disconnects via AppKit, clear states
-  useEffect(() => {
-    if (!isConnected) {
-      setSelectedNode(null);
-      setEvidenceNodeIds([]);
-      setInsightScore(null);
-      setCapacity(null);
-      setJudgeMode(false);
-      setActiveView('overview');
-    }
-  }, [isConnected]);
 
   // ─── Fetch live stats ───
   useEffect(() => {
@@ -83,7 +64,7 @@ function App() {
       .then(data => {
         const evIds = (data.nodes || [])
           .filter((n: any) => n.type === 'EVIDENCE')
-          .map((n: any) => n.id.replace('evidence_feat_', 'feat_'));
+          .map((n: any) => n.id);
         setEvidenceNodeIds(evIds);
 
         if (evIds.length > 0) {
@@ -105,10 +86,8 @@ function App() {
 
   const handleInspectorAction = (action: string, data?: any) => {
     if (action === 'repay' && data?.loanId) {
-      api.getTotalOwed(data.loanId)
-        .then(res => api.repayLoan(data.loanId, res.totalOwed))
-        .then(() => refreshGraph())
-        .catch(err => console.error('Repay failed:', err));
+      setActiveView('loans');
+      setWalletError('Use the Loans view to review and sign the repayment from your connected wallet.');
     }
   };
 
@@ -142,18 +121,25 @@ function App() {
             ⚖ Judge: {judgeMode ? 'ON' : 'OFF'}
           </span>
           {isConnected && wallet ? (
-            <button className="wallet-btn connected" onClick={handleDisconnect}>
+            <button className="wallet-btn connected" onClick={() => void handleDisconnect()}>
               <span className="wallet-dot" /> {wallet.slice(0, 6)}...{wallet.slice(-4)}
             </button>
           ) : (
-            <button className="wallet-btn" onClick={handleConnect}>
+            <button className="wallet-btn" onClick={() => void handleConnect()}>
               Connect Wallet
             </button>
           )}
         </div>
       </header>
 
-
+      {/* Wallet Error Toast */}
+      {walletError && (
+        <div className="wallet-error-toast">
+          <AlertTriangle size={16} />
+          <span>{walletError}</span>
+          <button onClick={() => setWalletError(null)}><X size={14} /></button>
+        </div>
+      )}
 
       {/* Left Side Panel */}
       <aside className="left-views">
@@ -206,7 +192,7 @@ function App() {
       {/* Center Canvas */}
       <main className="center-canvas">
         <GraphCanvas
-          borrowerAddress={wallet ?? null}
+          borrowerAddress={wallet}
           onNodeSelect={setSelectedNode}
           refreshTrigger={refreshTrigger}
         />
@@ -254,55 +240,119 @@ function App() {
 
 // ─── Add Evidence Modal ──────────────────────────────────────
 function AddEvidenceModal({ borrower, onClose, onSuccess }: { borrower: string; onClose: () => void; onSuccess: () => void }) {
-  const [form, setForm] = useState({ chainId: '1', eventType: 'INFLOW', txHash: '0x' + Math.random().toString(16).slice(2) });
-  const [status, setStatus] = useState<'idle' | 'verifying' | 'polling' | 'done' | 'error'>('idle');
+  const [form, setForm] = useState({ chainId: '11155111', eventType: 'INFLOW', txHash: '' });
+  const [existingRequestId, setExistingRequestId] = useState('');
+  const [status, setStatus] = useState<'idle' | 'verifying' | 'waiting' | 'proof-ready' | 'signing' | 'done' | 'error'>('idle');
   const [requestId, setRequestId] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { getSigner } = useCreditcoinWallet();
+  const verifierInterface = new Interface([
+    'event EvidenceVerified(bytes32 indexed queryId,bytes32 indexed evidenceId,address indexed borrower,uint64 chainKey,uint64 blockHeight,address token,address sender,uint256 amount,uint8 evidenceType,bytes32 transactionHash)',
+  ]);
 
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
+  const signProof = async () => {
+    setStatus('signing');
+    setResult(null);
+    try {
+      if (!requestId) throw new Error('Verification request ID is missing');
+      const prepared = await api.prepareVerification(requestId);
+      if (prepared.borrower.toLowerCase() !== borrower.toLowerCase()) {
+        throw new Error('Prepared proof borrower does not match the connected wallet');
+      }
+      const signer = await getSigner();
+      const signerAddress = await signer.getAddress();
+      if (signerAddress.toLowerCase() !== prepared.borrower.toLowerCase()) {
+        throw new Error('Connected wallet does not match the proof borrower');
+      }
+      const tx = await signer.sendTransaction({
+        to: prepared.to,
+        data: prepared.data,
+        value: prepared.value,
+      });
+      const receipt = await tx.wait();
+      if (!receipt || receipt.status !== 1) {
+        throw new Error('USCVerifier transaction was not confirmed successfully');
+      }
+
+      let evidenceId: string | undefined;
+      for (const log of receipt.logs) {
+        if (log.address.toLowerCase() !== prepared.to.toLowerCase()) continue;
+        try {
+          const parsed = verifierInterface.parseLog({ topics: [...log.topics], data: log.data });
+          if (parsed?.name === 'EvidenceVerified') {
+            const eventBorrower = String(parsed.args.borrower);
+            if (eventBorrower.toLowerCase() !== prepared.borrower.toLowerCase()) {
+              throw new Error('EvidenceVerified borrower does not match the connected wallet');
+            }
+            evidenceId = String(parsed.args.evidenceId);
+          }
+        } catch (error) {
+          if (error instanceof Error && error.message.startsWith('EvidenceVerified borrower')) throw error;
+        }
+      }
+      if (!evidenceId) throw new Error('USCVerifier receipt did not contain EvidenceVerified');
+
+      await api.completeVerification(requestId, receipt.hash, evidenceId);
+      const completed = await api.checkVerification(requestId);
+      if (completed.status !== 'VERIFIED') {
+        throw new Error(`Backend did not confirm VERIFIED status: ${completed.status}`);
+      }
+      setStatus('done');
+      setResult(`Verified evidence added. Creditcoin transaction: ${receipt.hash}`);
+      onSuccess();
+    } catch (error: any) {
+      setStatus('error');
+      setResult(error.message || 'Live USC verification failed.');
+    }
+  };
 
   const handleSubmit = async () => {
     setStatus('verifying');
+    setResult(null);
     try {
-      const res = await api.verify(form.chainId, form.eventType, form.txHash, borrower);
-      setRequestId(res.requestId);
-      setStatus('polling');
-
-      // Poll for confirmation
+      const suppliedRequestId = existingRequestId.trim();
+      if (suppliedRequestId) {
+        const existing = await api.checkVerification(suppliedRequestId);
+        setRequestId(suppliedRequestId);
+        if (existing.status !== 'PROOF_READY') {
+          throw new Error(`Existing request is not PROOF_READY: ${existing.status}`);
+        }
+        setStatus('proof-ready');
+        return;
+      }
+      if (!form.txHash) throw new Error('Enter a mined source-chain transaction hash');
+      const response = await api.verify(form.chainId, form.eventType, form.txHash, borrower);
+      setRequestId(response.requestId);
+      setStatus('waiting');
       pollRef.current = setInterval(async () => {
         try {
-          const statusRes = await api.checkVerification(res.requestId);
-          if (statusRes.status === 'CONFIRMED') {
+          const statusResponse = await api.checkVerification(response.requestId);
+          if (statusResponse.status === 'PROOF_READY') {
             if (pollRef.current) clearInterval(pollRef.current);
-            setStatus('done');
-            setResult('Evidence verified and added to graph!');
-            onSuccess();
-          } else if (statusRes.status === 'REJECTED') {
+            pollRef.current = null;
+            setStatus('proof-ready');
+          } else if (statusResponse.status === 'FAILED' || statusResponse.status === 'UNSUPPORTED') {
             if (pollRef.current) clearInterval(pollRef.current);
+            pollRef.current = null;
             setStatus('error');
-            setResult('Verification was rejected.');
+            setResult(statusResponse.error || 'Attestcoin proof generation failed.');
           }
         } catch { /* keep polling */ }
-      }, 1000);
-
-      // Timeout after 60s
-      setTimeout(() => {
+      }, 2000);
+      window.setTimeout(() => {
         if (pollRef.current) {
           clearInterval(pollRef.current);
           pollRef.current = null;
           setStatus('error');
-          setResult('Verification timed out. The transaction might not be attested yet or the prover is taking too long.');
+          setResult('Proof generation timed out; no success was fabricated.');
         }
-      }, 60000);
-    } catch (err: any) {
+      }, 900000);
+    } catch (error: any) {
       setStatus('error');
-      setResult(err.message);
+      setResult(error.message);
     }
   };
 
@@ -314,7 +364,11 @@ function AddEvidenceModal({ borrower, onClose, onSuccess }: { borrower: string; 
           <button className="modal-close" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="modal-body">
-          <p className="modal-desc">Submit a cross-chain transaction for Attestcoin verification. Once confirmed, it will appear as an evidence node in your credit graph.</p>
+          <p className="modal-desc">Submit a supported source-chain transaction, or load an existing PROOF_READY request. Attestcoin proof data stays on the backend until the final verification calldata is prepared; the Creditcoin transaction must be signed by your connected wallet.</p>
+          <div className="form-field">
+            <label>Existing PROOF_READY request ID (optional)</label>
+            <input value={existingRequestId} onChange={e => setExistingRequestId(e.target.value)} placeholder="req_..." />
+          </div>
           <div className="form-field">
             <label>Source Chain ID</label>
             <input value={form.chainId} onChange={e => setForm({...form, chainId: e.target.value})} />
@@ -331,21 +385,16 @@ function AddEvidenceModal({ borrower, onClose, onSuccess }: { borrower: string; 
             <input value={form.txHash} onChange={e => setForm({...form, txHash: e.target.value})} />
           </div>
 
-          {status === 'polling' && (
-            <div className="verification-progress">
-              <div className="loading-spinner" />
-              <span>Verifying via Attestcoin... (Request: {requestId?.slice(0, 12)}...)</span>
-            </div>
+          {(status === 'waiting' || status === 'verifying') && (
+            <div className="verification-progress"><div className="loading-spinner" /><span>Waiting for attestation/proof generation... (Request: {requestId?.slice(0, 12)}...)</span></div>
           )}
+          {status === 'proof-ready' && <div className="verification-progress"><span>Proof ready. Review the wallet prompt to verify it on Creditcoin.</span></div>}
+          {status === 'signing' && <div className="verification-progress"><div className="loading-spinner" /><span>Awaiting Creditcoin wallet confirmation...</span></div>}
           {status === 'done' && <div className="result-msg success">{result}</div>}
           {status === 'error' && <div className="result-msg error">{result}</div>}
 
-          <button
-            className="primary-action-btn"
-            onClick={handleSubmit}
-            disabled={status === 'verifying' || status === 'polling'}
-          >
-            {status === 'idle' ? 'Submit for Verification' : status === 'done' ? '✓ Done' : 'Verifying...'}
+          <button className="primary-action-btn" onClick={() => void (status === 'proof-ready' ? signProof() : handleSubmit())} disabled={['verifying', 'waiting', 'signing', 'done'].includes(status)}>
+            {status === 'idle' ? (existingRequestId.trim() ? 'Load Existing Proof' : 'Request Attestcoin Proof') : status === 'proof-ready' ? 'Verify on Creditcoin' : status === 'done' ? '✓ Done' : status === 'signing' ? 'Awaiting Signature...' : 'Generating Proof...'}
           </button>
         </div>
       </div>

@@ -6,19 +6,25 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface ICapacityManagerInterface extends Interface {
-    getFunction(nameOrSignature: "availableCapacity" | "canBorrow" | "getUsedCapacity" | "releaseCapacity" | "reserveCapacity"): FunctionFragment;
+    getFunction(nameOrSignature: "availableCapacity" | "canBorrow" | "getDefaultedLockedCapacity" | "getTotalConsumedCapacity" | "getUsedCapacity" | "lockDefaultedCapacity" | "releaseCapacity" | "reserveCapacity"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "CapacityReleased" | "CapacityReserved"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "CapacityReleased" | "CapacityReserved" | "DefaultCapacityLocked"): EventFragment;
 
     encodeFunctionData(functionFragment: 'availableCapacity', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'canBorrow', values: [AddressLike, BigNumberish]): string;
+encodeFunctionData(functionFragment: 'getDefaultedLockedCapacity', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'getTotalConsumedCapacity', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'getUsedCapacity', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'lockDefaultedCapacity', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'releaseCapacity', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'reserveCapacity', values: [AddressLike, BigNumberish]): string;
 
     decodeFunctionResult(functionFragment: 'availableCapacity', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'canBorrow', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getDefaultedLockedCapacity', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getTotalConsumedCapacity', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getUsedCapacity', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'lockDefaultedCapacity', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'releaseCapacity', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'reserveCapacity', data: BytesLike): Result;
   }
@@ -37,6 +43,18 @@ decodeFunctionResult(functionFragment: 'reserveCapacity', data: BytesLike): Resu
   
 
     export namespace CapacityReservedEvent {
+      export type InputTuple = [borrower: AddressLike, amount: BigNumberish];
+      export type OutputTuple = [borrower: string, amount: bigint];
+      export interface OutputObject {borrower: string, amount: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace DefaultCapacityLockedEvent {
       export type InputTuple = [borrower: AddressLike, amount: BigNumberish];
       export type OutputTuple = [borrower: string, amount: bigint];
       export interface OutputObject {borrower: string, amount: bigint };
@@ -98,10 +116,34 @@ decodeFunctionResult(functionFragment: 'reserveCapacity', data: BytesLike): Resu
     
 
     
+    getDefaultedLockedCapacity: TypedContractMethod<
+      [borrower: AddressLike, ],
+      [bigint],
+      'view'
+    >
+    
+
+    
+    getTotalConsumedCapacity: TypedContractMethod<
+      [borrower: AddressLike, ],
+      [bigint],
+      'view'
+    >
+    
+
+    
     getUsedCapacity: TypedContractMethod<
       [borrower: AddressLike, ],
       [bigint],
       'view'
+    >
+    
+
+    
+    lockDefaultedCapacity: TypedContractMethod<
+      [borrower: AddressLike, amount: BigNumberish, ],
+      [void],
+      'nonpayable'
     >
     
 
@@ -134,10 +176,25 @@ getFunction(nameOrSignature: 'canBorrow'): TypedContractMethod<
       [boolean],
       'view'
     >;
+getFunction(nameOrSignature: 'getDefaultedLockedCapacity'): TypedContractMethod<
+      [borrower: AddressLike, ],
+      [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getTotalConsumedCapacity'): TypedContractMethod<
+      [borrower: AddressLike, ],
+      [bigint],
+      'view'
+    >;
 getFunction(nameOrSignature: 'getUsedCapacity'): TypedContractMethod<
       [borrower: AddressLike, ],
       [bigint],
       'view'
+    >;
+getFunction(nameOrSignature: 'lockDefaultedCapacity'): TypedContractMethod<
+      [borrower: AddressLike, amount: BigNumberish, ],
+      [void],
+      'nonpayable'
     >;
 getFunction(nameOrSignature: 'releaseCapacity'): TypedContractMethod<
       [borrower: AddressLike, amount: BigNumberish, ],
@@ -152,6 +209,7 @@ getFunction(nameOrSignature: 'reserveCapacity'): TypedContractMethod<
 
     getEvent(key: 'CapacityReleased'): TypedContractEvent<CapacityReleasedEvent.InputTuple, CapacityReleasedEvent.OutputTuple, CapacityReleasedEvent.OutputObject>;
 getEvent(key: 'CapacityReserved'): TypedContractEvent<CapacityReservedEvent.InputTuple, CapacityReservedEvent.OutputTuple, CapacityReservedEvent.OutputObject>;
+getEvent(key: 'DefaultCapacityLocked'): TypedContractEvent<DefaultCapacityLockedEvent.InputTuple, DefaultCapacityLockedEvent.OutputTuple, DefaultCapacityLockedEvent.OutputObject>;
 
     filters: {
       
@@ -161,6 +219,10 @@ getEvent(key: 'CapacityReserved'): TypedContractEvent<CapacityReservedEvent.Inpu
 
       'CapacityReserved(address,uint256)': TypedContractEvent<CapacityReservedEvent.InputTuple, CapacityReservedEvent.OutputTuple, CapacityReservedEvent.OutputObject>;
       CapacityReserved: TypedContractEvent<CapacityReservedEvent.InputTuple, CapacityReservedEvent.OutputTuple, CapacityReservedEvent.OutputObject>;
+    
+
+      'DefaultCapacityLocked(address,uint256)': TypedContractEvent<DefaultCapacityLockedEvent.InputTuple, DefaultCapacityLockedEvent.OutputTuple, DefaultCapacityLockedEvent.OutputObject>;
+      DefaultCapacityLocked: TypedContractEvent<DefaultCapacityLockedEvent.InputTuple, DefaultCapacityLockedEvent.OutputTuple, DefaultCapacityLockedEvent.OutputObject>;
     
     };
   }

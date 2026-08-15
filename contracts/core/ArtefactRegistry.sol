@@ -3,10 +3,21 @@ pragma solidity ^0.8.20;
 
 import "../libraries/CreditTypes.sol";
 import "../interfaces/IArtefactRegistry.sol";
+import "../interfaces/IEligibilityRegistry.sol";
 
 contract ArtefactRegistry is IArtefactRegistry {
     mapping(bytes32 => Artefact) public artefacts;
     mapping(address => bytes32[]) public creatorArtefacts;
+    IEligibilityRegistry public immutable eligibilityRegistry;
+
+    error InvalidArtefact();
+    error EligibilityNonceMismatch(uint256 expected, uint256 provided);
+    error EligibilityRequired();
+
+    constructor(address _eligibilityRegistry) {
+        require(_eligibilityRegistry != address(0), "zero eligibility registry");
+        eligibilityRegistry = IEligibilityRegistry(_eligibilityRegistry);
+    }
 
     function commitArtefact(
         bytes32 snapshotCommitment,
@@ -14,8 +25,20 @@ contract ArtefactRegistry is IArtefactRegistry {
         bytes32 policyReference,
         string calldata contentReference
     ) external {
-        bytes32 artefactId = keccak256(abi.encodePacked(msg.sender, snapshotCommitment, block.timestamp));
-        
+        if (snapshotCommitment == bytes32(0) || policyReference == bytes32(0) || bytes(contentReference).length == 0) {
+            revert InvalidArtefact();
+        }
+        Eligibility memory eligibility = eligibilityRegistry.getEligibility(msg.sender);
+        if (!eligibility.active || block.timestamp >= eligibility.validUntil) revert EligibilityRequired();
+        if (eligibility.nonce != eligibilityNonce) revert EligibilityNonceMismatch(eligibility.nonce, eligibilityNonce);
+
+        bytes32 artefactId = keccak256(abi.encode(
+            msg.sender,
+            snapshotCommitment,
+            eligibilityNonce,
+            policyReference,
+            contentReference
+        ));
         if (artefacts[artefactId].timestamp != 0) revert ArtefactAlreadyExists();
 
         artefacts[artefactId] = Artefact({
@@ -27,9 +50,7 @@ contract ArtefactRegistry is IArtefactRegistry {
             timestamp: block.timestamp,
             contentReference: contentReference
         });
-
         creatorArtefacts[msg.sender].push(artefactId);
-        
         emit ArtefactCommitted(artefactId, msg.sender, snapshotCommitment);
     }
 

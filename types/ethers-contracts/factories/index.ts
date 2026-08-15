@@ -4,3 +4,4 @@
 export * as core from './core/index.js';
 export * as interfaces from './interfaces/index.js';
 export * as libraries from './libraries/index.js';
+export * as usc from './usc/index.js';

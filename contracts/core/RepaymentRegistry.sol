@@ -11,10 +11,13 @@ contract RepaymentRegistry is Ownable, IRepaymentRegistry {
     address public authorizedRecorder;
 
     error Unauthorized();
+    error AlreadyRecorded(uint256 loanId);
+    error InvalidRecord();
 
     constructor() Ownable(msg.sender) {}
 
     function setAuthorizedRecorder(address _recorder) external onlyOwner {
+        require(_recorder != address(0), "zero recorder");
         authorizedRecorder = _recorder;
     }
 
@@ -25,6 +28,8 @@ contract RepaymentRegistry is Ownable, IRepaymentRegistry {
         RepaymentOutcome outcome
     ) external {
         if (msg.sender != authorizedRecorder) revert Unauthorized();
+        if (borrower == address(0) || loanId == 0) revert InvalidRecord();
+        if (records[loanId].borrower != address(0)) revert AlreadyRecorded(loanId);
 
         records[loanId] = RepaymentRecord({
             loanId: loanId,
@@ -33,9 +38,7 @@ contract RepaymentRegistry is Ownable, IRepaymentRegistry {
             timestamp: block.timestamp,
             outcome: outcome
         });
-
         borrowerRepayments[borrower].push(loanId);
-        
         emit RepaymentRecorded(loanId, borrower, amount, outcome);
     }
 

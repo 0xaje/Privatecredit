@@ -1,57 +1,63 @@
 import { Router, Request, Response } from 'express';
-import { attestcoinService } from '../services/AttestcoinService';
-import { evidenceNormalizer } from '../services/EvidenceNormalizer';
-import { graphStore } from '../services/GraphStore';
+import { AttestcoinService, attestcoinService } from '../services/AttestcoinService';
 
 export const attestcoinRouter = Router();
 
-// 1. Trigger verification
 attestcoinRouter.post('/verify', async (req: Request, res: Response) => {
-    try {
-        const { chainId, eventType, txHash, borrower } = req.body;
-        if (!chainId || !eventType || !txHash || !borrower) {
-            return res.status(400).json({ error: "Missing required fields" });
-        }
-        
-        const requestId = await attestcoinService.createVerificationRequest(chainId, eventType, txHash, borrower);
-        res.json({ requestId, status: 'PENDING' });
-    } catch (e: any) {
-        res.status(500).json({ error: e.message });
-    }
+  try {
+    const { chainId, eventType, txHash, borrower } = req.body;
+    const requestId = await attestcoinService.createVerificationRequest(chainId, eventType, txHash, borrower);
+    res.json({ requestId, status: 'PENDING_ATTESTATION' });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
 });
 
-// 2. Check status and process if confirmed
-attestcoinRouter.get('/status/:requestId', (req: Request, res: Response) => {
-    try {
-        const requestId = req.params.requestId as string;
-        const status = attestcoinService.checkVerificationStatus(requestId);
-        
-        if (status === 'CONFIRMED') {
-            const rawResult = attestcoinService.getVerificationResult(requestId);
-            
-            const reqInfo = attestcoinService.getRequest(requestId);
-            const borrower = reqInfo.borrower;
-            const chainId = reqInfo.chainId;
-            const eventType = reqInfo.eventType;
-            const txHash = reqInfo.txHash;
-
-            const evidenceNodeId = `evidence_feat_${requestId}`;
-            if (!graphStore.getNode(evidenceNodeId)) {
-                evidenceNormalizer.normalizeAndStore(
-                    borrower,
-                    requestId,
-                    chainId,
-                    eventType,
-                    txHash,
-                    rawResult
-                );
-            }
-
-            return res.json({ status, borrower, chainId, eventType, txHash });
-        }
-        
-        res.json({ status });
-    } catch (e: any) {
-        res.status(400).json({ error: e.message });
+attestcoinRouter.post('/prepare', (req: Request, res: Response) => {
+  try {
+    const { requestId } = req.body;
+    if (typeof requestId !== 'string' || requestId.length === 0) {
+      throw new Error('requestId is required');
     }
+    res.json(attestcoinService.prepareVerification(requestId));
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+attestcoinRouter.get('/status/:requestId', (req: Request, res: Response) => {
+  try {
+    const request = attestcoinService.checkVerificationStatus(req.params.requestId as string);
+    res.json({
+      status: request.status,
+      requestId: request.requestId,
+      chainId: request.chainId,
+      chainKey: request.chainKey,
+      eventType: request.eventType,
+      txHash: request.txHash,
+      borrower: request.borrower,
+      sourceBlock: request.sourceBlock,
+      proof: request.proof,
+      creditcoinTxHash: request.creditcoinTxHash,
+      evidenceId: request.evidenceId,
+      feature: request.feature,
+      error: request.error,
+    });
+  } catch (error: any) {
+    res.status(404).json({ error: error.message });
+  }
+});
+
+attestcoinRouter.post('/complete', async (req: Request, res: Response) => {
+  try {
+    const { requestId, creditcoinTxHash, evidenceId } = req.body;
+    const feature = await attestcoinService.completeVerification(requestId, creditcoinTxHash, evidenceId);
+    res.json({ status: 'VERIFIED', feature });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+attestcoinRouter.get('/precompile', (_req: Request, res: Response) => {
+  res.json({ address: AttestcoinService.getVerifierPrecompile(), chainId: 102031 });
 });
