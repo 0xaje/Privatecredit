@@ -3,7 +3,7 @@
 /* eslint-disable */
 import type { BaseContract, BigNumberish, BytesLike, FunctionFragment, Result, Interface, EventFragment, AddressLike, ContractRunner, ContractMethod, Listener } from "ethers"
 import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, TypedLogDescription, TypedListener, TypedContractMethod } from "../common.js"
-
+  
 
   export interface ICapacityManagerInterface extends Interface {
     getFunction(nameOrSignature: "availableCapacity" | "canBorrow" | "getDefaultedLockedCapacity" | "getTotalConsumedCapacity" | "getUsedCapacity" | "lockDefaultedCapacity" | "releaseCapacity" | "reserveCapacity"): FunctionFragment;
@@ -29,7 +29,7 @@ decodeFunctionResult(functionFragment: 'releaseCapacity', data: BytesLike): Resu
 decodeFunctionResult(functionFragment: 'reserveCapacity', data: BytesLike): Result;
   }
 
-
+  
     export namespace CapacityReleasedEvent {
       export type InputTuple = [borrower: AddressLike, amount: BigNumberish];
       export type OutputTuple = [borrower: string, amount: bigint];
@@ -40,7 +40,7 @@ decodeFunctionResult(functionFragment: 'reserveCapacity', data: BytesLike): Resu
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
     export namespace CapacityReservedEvent {
       export type InputTuple = [borrower: AddressLike, amount: BigNumberish];
@@ -52,7 +52,7 @@ decodeFunctionResult(functionFragment: 'reserveCapacity', data: BytesLike): Resu
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
     export namespace DefaultCapacityLockedEvent {
       export type InputTuple = [borrower: AddressLike, amount: BigNumberish];
@@ -64,16 +64,16 @@ decodeFunctionResult(functionFragment: 'reserveCapacity', data: BytesLike): Resu
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
   export interface ICapacityManager extends BaseContract {
-
+    
     connect(runner?: ContractRunner | null): ICapacityManager;
     waitForDeployment(): Promise<this>;
 
     interface: ICapacityManagerInterface;
 
-
+    
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
@@ -87,7 +87,7 @@ decodeFunctionResult(functionFragment: 'reserveCapacity', data: BytesLike): Resu
 
   on<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   on<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
-
+  
   once<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   once<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
 
@@ -98,70 +98,70 @@ decodeFunctionResult(functionFragment: 'reserveCapacity', data: BytesLike): Resu
   removeAllListeners<TCEvent extends TypedContractEvent>(event?: TCEvent): Promise<this>
 
 
-
-
+    
+    
     availableCapacity: TypedContractMethod<
       [borrower: AddressLike, ],
       [bigint],
       'view'
     >
+    
 
-
-
+    
     canBorrow: TypedContractMethod<
       [borrower: AddressLike, amount: BigNumberish, ],
       [boolean],
       'view'
     >
+    
 
-
-
+    
     getDefaultedLockedCapacity: TypedContractMethod<
       [borrower: AddressLike, ],
       [bigint],
       'view'
     >
+    
 
-
-
+    
     getTotalConsumedCapacity: TypedContractMethod<
       [borrower: AddressLike, ],
       [bigint],
       'view'
     >
+    
 
-
-
+    
     getUsedCapacity: TypedContractMethod<
       [borrower: AddressLike, ],
       [bigint],
       'view'
     >
+    
 
-
-
+    
     lockDefaultedCapacity: TypedContractMethod<
       [borrower: AddressLike, amount: BigNumberish, ],
       [void],
       'nonpayable'
     >
+    
 
-
-
+    
     releaseCapacity: TypedContractMethod<
       [borrower: AddressLike, amount: BigNumberish, ],
       [void],
       'nonpayable'
     >
+    
 
-
-
+    
     reserveCapacity: TypedContractMethod<
       [borrower: AddressLike, amount: BigNumberish, ],
       [void],
       'nonpayable'
     >
-
+    
 
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
@@ -212,17 +212,17 @@ getEvent(key: 'CapacityReserved'): TypedContractEvent<CapacityReservedEvent.Inpu
 getEvent(key: 'DefaultCapacityLocked'): TypedContractEvent<DefaultCapacityLockedEvent.InputTuple, DefaultCapacityLockedEvent.OutputTuple, DefaultCapacityLockedEvent.OutputObject>;
 
     filters: {
-
+      
       'CapacityReleased(address,uint256)': TypedContractEvent<CapacityReleasedEvent.InputTuple, CapacityReleasedEvent.OutputTuple, CapacityReleasedEvent.OutputObject>;
       CapacityReleased: TypedContractEvent<CapacityReleasedEvent.InputTuple, CapacityReleasedEvent.OutputTuple, CapacityReleasedEvent.OutputObject>;
-
+    
 
       'CapacityReserved(address,uint256)': TypedContractEvent<CapacityReservedEvent.InputTuple, CapacityReservedEvent.OutputTuple, CapacityReservedEvent.OutputObject>;
       CapacityReserved: TypedContractEvent<CapacityReservedEvent.InputTuple, CapacityReservedEvent.OutputTuple, CapacityReservedEvent.OutputObject>;
-
+    
 
       'DefaultCapacityLocked(address,uint256)': TypedContractEvent<DefaultCapacityLockedEvent.InputTuple, DefaultCapacityLockedEvent.OutputTuple, DefaultCapacityLockedEvent.OutputObject>;
       DefaultCapacityLocked: TypedContractEvent<DefaultCapacityLockedEvent.InputTuple, DefaultCapacityLockedEvent.OutputTuple, DefaultCapacityLockedEvent.OutputObject>;
-
+    
     };
   }

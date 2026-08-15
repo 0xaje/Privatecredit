@@ -3,89 +3,89 @@
 /* eslint-disable */
 import type { BaseContract, BigNumberish, BytesLike, FunctionFragment, Result, Interface, AddressLike, ContractRunner, ContractMethod, Listener } from "ethers"
 import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, TypedListener, TypedContractMethod } from "../common.js"
-
+  
 export declare namespace EvmV1Decoder {
-
+      
     export type CommonTxFieldsStruct = {nonce: BigNumberish, gasLimit: BigNumberish, from: AddressLike, toIsNull: boolean, to: AddressLike, value: BigNumberish, data: BytesLike}
 
     export type CommonTxFieldsStructOutput = [nonce: bigint, gasLimit: bigint, from: string, toIsNull: boolean, to: string, value: bigint, data: string] & {nonce: bigint, gasLimit: bigint, from: string, toIsNull: boolean, to: string, value: bigint, data: string }
-
+  
 
     export type LogEntryStruct = {address_: AddressLike, topics: BytesLike[], data: BytesLike}
 
     export type LogEntryStructOutput = [address_: string, topics: string[], data: string] & {address_: string, topics: string[], data: string }
-
+  
 
     export type ReceiptFieldsStruct = {receiptStatus: BigNumberish, receiptGasUsed: BigNumberish, receiptLogs: EvmV1Decoder.LogEntryStruct[], receiptLogsBloom: BytesLike}
 
     export type ReceiptFieldsStructOutput = [receiptStatus: bigint, receiptGasUsed: bigint, receiptLogs: EvmV1Decoder.LogEntryStructOutput[], receiptLogsBloom: string] & {receiptStatus: bigint, receiptGasUsed: bigint, receiptLogs: EvmV1Decoder.LogEntryStructOutput[], receiptLogsBloom: string }
-
+  
 
     export type LegacyFieldsStruct = {gasPrice: BigNumberish, v: BigNumberish, r: BytesLike, s: BytesLike}
 
     export type LegacyFieldsStructOutput = [gasPrice: bigint, v: bigint, r: string, s: string] & {gasPrice: bigint, v: bigint, r: string, s: string }
-
+  
 
     export type DecodedTransactionType0Struct = {commonTx: EvmV1Decoder.CommonTxFieldsStruct, type0: EvmV1Decoder.LegacyFieldsStruct, receipt: EvmV1Decoder.ReceiptFieldsStruct}
 
     export type DecodedTransactionType0StructOutput = [commonTx: EvmV1Decoder.CommonTxFieldsStructOutput, type0: EvmV1Decoder.LegacyFieldsStructOutput, receipt: EvmV1Decoder.ReceiptFieldsStructOutput] & {commonTx: EvmV1Decoder.CommonTxFieldsStructOutput, type0: EvmV1Decoder.LegacyFieldsStructOutput, receipt: EvmV1Decoder.ReceiptFieldsStructOutput }
-
+  
 
     export type AccessListEntryStruct = {account: AddressLike, storageKeys: BytesLike[]}
 
     export type AccessListEntryStructOutput = [account: string, storageKeys: string[]] & {account: string, storageKeys: string[] }
-
+  
 
     export type Type1FieldsStruct = {chainId: BigNumberish, gasPrice: BigNumberish, accessList: EvmV1Decoder.AccessListEntryStruct[], yParity: BigNumberish, r: BytesLike, s: BytesLike}
 
     export type Type1FieldsStructOutput = [chainId: bigint, gasPrice: bigint, accessList: EvmV1Decoder.AccessListEntryStructOutput[], yParity: bigint, r: string, s: string] & {chainId: bigint, gasPrice: bigint, accessList: EvmV1Decoder.AccessListEntryStructOutput[], yParity: bigint, r: string, s: string }
-
+  
 
     export type DecodedTransactionType1Struct = {commonTx: EvmV1Decoder.CommonTxFieldsStruct, type1: EvmV1Decoder.Type1FieldsStruct, receipt: EvmV1Decoder.ReceiptFieldsStruct}
 
     export type DecodedTransactionType1StructOutput = [commonTx: EvmV1Decoder.CommonTxFieldsStructOutput, type1: EvmV1Decoder.Type1FieldsStructOutput, receipt: EvmV1Decoder.ReceiptFieldsStructOutput] & {commonTx: EvmV1Decoder.CommonTxFieldsStructOutput, type1: EvmV1Decoder.Type1FieldsStructOutput, receipt: EvmV1Decoder.ReceiptFieldsStructOutput }
-
+  
 
     export type Type2FieldsStruct = {chainId: BigNumberish, maxPriorityFeePerGas: BigNumberish, maxFeePerGas: BigNumberish, accessList: EvmV1Decoder.AccessListEntryStruct[], yParity: BigNumberish, r: BytesLike, s: BytesLike}
 
     export type Type2FieldsStructOutput = [chainId: bigint, maxPriorityFeePerGas: bigint, maxFeePerGas: bigint, accessList: EvmV1Decoder.AccessListEntryStructOutput[], yParity: bigint, r: string, s: string] & {chainId: bigint, maxPriorityFeePerGas: bigint, maxFeePerGas: bigint, accessList: EvmV1Decoder.AccessListEntryStructOutput[], yParity: bigint, r: string, s: string }
-
+  
 
     export type DecodedTransactionType2Struct = {commonTx: EvmV1Decoder.CommonTxFieldsStruct, type2: EvmV1Decoder.Type2FieldsStruct, receipt: EvmV1Decoder.ReceiptFieldsStruct}
 
     export type DecodedTransactionType2StructOutput = [commonTx: EvmV1Decoder.CommonTxFieldsStructOutput, type2: EvmV1Decoder.Type2FieldsStructOutput, receipt: EvmV1Decoder.ReceiptFieldsStructOutput] & {commonTx: EvmV1Decoder.CommonTxFieldsStructOutput, type2: EvmV1Decoder.Type2FieldsStructOutput, receipt: EvmV1Decoder.ReceiptFieldsStructOutput }
-
+  
 
     export type Type3FieldsStruct = {chainId: BigNumberish, maxPriorityFeePerGas: BigNumberish, maxFeePerGas: BigNumberish, accessList: EvmV1Decoder.AccessListEntryStruct[], maxFeePerBlobGas: BigNumberish, blobVersionedHashes: BytesLike[], yParity: BigNumberish, r: BytesLike, s: BytesLike}
 
     export type Type3FieldsStructOutput = [chainId: bigint, maxPriorityFeePerGas: bigint, maxFeePerGas: bigint, accessList: EvmV1Decoder.AccessListEntryStructOutput[], maxFeePerBlobGas: bigint, blobVersionedHashes: string[], yParity: bigint, r: string, s: string] & {chainId: bigint, maxPriorityFeePerGas: bigint, maxFeePerGas: bigint, accessList: EvmV1Decoder.AccessListEntryStructOutput[], maxFeePerBlobGas: bigint, blobVersionedHashes: string[], yParity: bigint, r: string, s: string }
-
+  
 
     export type DecodedTransactionType3Struct = {commonTx: EvmV1Decoder.CommonTxFieldsStruct, type3: EvmV1Decoder.Type3FieldsStruct, receipt: EvmV1Decoder.ReceiptFieldsStruct}
 
     export type DecodedTransactionType3StructOutput = [commonTx: EvmV1Decoder.CommonTxFieldsStructOutput, type3: EvmV1Decoder.Type3FieldsStructOutput, receipt: EvmV1Decoder.ReceiptFieldsStructOutput] & {commonTx: EvmV1Decoder.CommonTxFieldsStructOutput, type3: EvmV1Decoder.Type3FieldsStructOutput, receipt: EvmV1Decoder.ReceiptFieldsStructOutput }
-
+  
 
     export type AuthorizationListEntryStruct = {chainId: BigNumberish, account: AddressLike, nonce: BigNumberish, yParity: BigNumberish, r: BigNumberish, s: BigNumberish}
 
     export type AuthorizationListEntryStructOutput = [chainId: bigint, account: string, nonce: bigint, yParity: bigint, r: bigint, s: bigint] & {chainId: bigint, account: string, nonce: bigint, yParity: bigint, r: bigint, s: bigint }
-
+  
 
     export type Type4FieldsStruct = {chainId: BigNumberish, maxPriorityFeePerGas: BigNumberish, maxFeePerGas: BigNumberish, accessList: EvmV1Decoder.AccessListEntryStruct[], authorizationList: EvmV1Decoder.AuthorizationListEntryStruct[], yParity: BigNumberish, r: BytesLike, s: BytesLike}
 
     export type Type4FieldsStructOutput = [chainId: bigint, maxPriorityFeePerGas: bigint, maxFeePerGas: bigint, accessList: EvmV1Decoder.AccessListEntryStructOutput[], authorizationList: EvmV1Decoder.AuthorizationListEntryStructOutput[], yParity: bigint, r: string, s: string] & {chainId: bigint, maxPriorityFeePerGas: bigint, maxFeePerGas: bigint, accessList: EvmV1Decoder.AccessListEntryStructOutput[], authorizationList: EvmV1Decoder.AuthorizationListEntryStructOutput[], yParity: bigint, r: string, s: string }
-
+  
 
     export type DecodedTransactionType4Struct = {commonTx: EvmV1Decoder.CommonTxFieldsStruct, type4: EvmV1Decoder.Type4FieldsStruct, receipt: EvmV1Decoder.ReceiptFieldsStruct}
 
     export type DecodedTransactionType4StructOutput = [commonTx: EvmV1Decoder.CommonTxFieldsStructOutput, type4: EvmV1Decoder.Type4FieldsStructOutput, receipt: EvmV1Decoder.ReceiptFieldsStructOutput] & {commonTx: EvmV1Decoder.CommonTxFieldsStructOutput, type4: EvmV1Decoder.Type4FieldsStructOutput, receipt: EvmV1Decoder.ReceiptFieldsStructOutput }
-
+  
     }
 
   export interface EvmV1DecoderInterface extends Interface {
     getFunction(nameOrSignature: "decodeCommonTxFields" | "decodeReceiptFields" | "decodeTransactionType0" | "decodeTransactionType1" | "decodeTransactionType2" | "decodeTransactionType3" | "decodeTransactionType4" | "decodeTypeSpecificFieldsType0" | "decodeTypeSpecificFieldsType1" | "decodeTypeSpecificFieldsType2" | "decodeTypeSpecificFieldsType3" | "decodeTypeSpecificFieldsType4" | "getLogsByEventSignature((address,bytes32[],bytes)[],bytes32)" | "getLogsByEventSignature((uint8,uint64,(address,bytes32[],bytes)[],bytes),bytes32)" | "getTransactionType" | "isValidTransactionType"): FunctionFragment;
 
-
+    
 
     encodeFunctionData(functionFragment: 'decodeCommonTxFields', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'decodeReceiptFields', values: [BytesLike]): string;
@@ -122,16 +122,16 @@ decodeFunctionResult(functionFragment: 'getTransactionType', data: BytesLike): R
 decodeFunctionResult(functionFragment: 'isValidTransactionType', data: BytesLike): Result;
   }
 
-
+  
 
   export interface EvmV1Decoder extends BaseContract {
-
+    
     connect(runner?: ContractRunner | null): EvmV1Decoder;
     waitForDeployment(): Promise<this>;
 
     interface: EvmV1DecoderInterface;
 
-
+    
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
@@ -145,7 +145,7 @@ decodeFunctionResult(functionFragment: 'isValidTransactionType', data: BytesLike
 
   on<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   on<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
-
+  
   once<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   once<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
 
@@ -156,134 +156,134 @@ decodeFunctionResult(functionFragment: 'isValidTransactionType', data: BytesLike
   removeAllListeners<TCEvent extends TypedContractEvent>(event?: TCEvent): Promise<this>
 
 
-
-
+    
+    
     decodeCommonTxFields: TypedContractMethod<
       [chunk: BytesLike, ],
       [EvmV1Decoder.CommonTxFieldsStructOutput],
       'view'
     >
+    
 
-
-
+    
     decodeReceiptFields: TypedContractMethod<
       [chunk: BytesLike, ],
       [EvmV1Decoder.ReceiptFieldsStructOutput],
       'view'
     >
+    
 
-
-
+    
     decodeTransactionType0: TypedContractMethod<
       [chunk: BytesLike, ],
       [EvmV1Decoder.DecodedTransactionType0StructOutput],
       'view'
     >
+    
 
-
-
+    
     decodeTransactionType1: TypedContractMethod<
       [chunk: BytesLike, ],
       [EvmV1Decoder.DecodedTransactionType1StructOutput],
       'view'
     >
+    
 
-
-
+    
     decodeTransactionType2: TypedContractMethod<
       [chunk: BytesLike, ],
       [EvmV1Decoder.DecodedTransactionType2StructOutput],
       'view'
     >
+    
 
-
-
+    
     decodeTransactionType3: TypedContractMethod<
       [chunk: BytesLike, ],
       [EvmV1Decoder.DecodedTransactionType3StructOutput],
       'view'
     >
+    
 
-
-
+    
     decodeTransactionType4: TypedContractMethod<
       [chunk: BytesLike, ],
       [EvmV1Decoder.DecodedTransactionType4StructOutput],
       'view'
     >
+    
 
-
-
+    
     decodeTypeSpecificFieldsType0: TypedContractMethod<
       [chunk: BytesLike, ],
       [EvmV1Decoder.LegacyFieldsStructOutput],
       'view'
     >
+    
 
-
-
+    
     decodeTypeSpecificFieldsType1: TypedContractMethod<
       [chunk: BytesLike, ],
       [EvmV1Decoder.Type1FieldsStructOutput],
       'view'
     >
+    
 
-
-
+    
     decodeTypeSpecificFieldsType2: TypedContractMethod<
       [chunk: BytesLike, ],
       [EvmV1Decoder.Type2FieldsStructOutput],
       'view'
     >
+    
 
-
-
+    
     decodeTypeSpecificFieldsType3: TypedContractMethod<
       [chunk: BytesLike, ],
       [EvmV1Decoder.Type3FieldsStructOutput],
       'view'
     >
+    
 
-
-
+    
     decodeTypeSpecificFieldsType4: TypedContractMethod<
       [chunk: BytesLike, ],
       [EvmV1Decoder.Type4FieldsStructOutput],
       'view'
     >
+    
 
-
-
+    
     "getLogsByEventSignature((address,bytes32[],bytes)[],bytes32)": TypedContractMethod<
       [logs: EvmV1Decoder.LogEntryStruct[], eventSignature: BytesLike, ],
       [EvmV1Decoder.LogEntryStructOutput[]],
       'view'
     >
+    
 
-
-
+    
     "getLogsByEventSignature((uint8,uint64,(address,bytes32[],bytes)[],bytes),bytes32)": TypedContractMethod<
       [receipt: EvmV1Decoder.ReceiptFieldsStruct, eventSignature: BytesLike, ],
       [EvmV1Decoder.LogEntryStructOutput[]],
       'view'
     >
+    
 
-
-
+    
     getTransactionType: TypedContractMethod<
       [encodedTx: BytesLike, ],
       [bigint],
       'view'
     >
+    
 
-
-
+    
     isValidTransactionType: TypedContractMethod<
       [txType: BigNumberish, ],
       [boolean],
       'view'
     >
-
+    
 
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
@@ -369,9 +369,9 @@ getFunction(nameOrSignature: 'isValidTransactionType'): TypedContractMethod<
       'view'
     >;
 
-
+    
 
     filters: {
-
+      
     };
   }

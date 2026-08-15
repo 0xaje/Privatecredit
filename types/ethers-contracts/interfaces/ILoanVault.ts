@@ -3,11 +3,11 @@
 /* eslint-disable */
 import type { BaseContract, BigNumberish, BytesLike, FunctionFragment, Result, Interface, EventFragment, AddressLike, ContractRunner, ContractMethod, Listener } from "ethers"
 import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, TypedLogDescription, TypedListener, TypedContractMethod } from "../common.js"
-
+  
     export type LoanStruct = {loanId: BigNumberish, borrower: AddressLike, lender: AddressLike, principal: BigNumberish, aprBps: BigNumberish, startTime: BigNumberish, duration: BigNumberish, collateralAmount: BigNumberish, repaidAmount: BigNumberish, status: BigNumberish}
 
     export type LoanStructOutput = [loanId: bigint, borrower: string, lender: string, principal: bigint, aprBps: bigint, startTime: bigint, duration: bigint, collateralAmount: bigint, repaidAmount: bigint, status: bigint] & {loanId: bigint, borrower: string, lender: string, principal: bigint, aprBps: bigint, startTime: bigint, duration: bigint, collateralAmount: bigint, repaidAmount: bigint, status: bigint }
-
+  
 
   export interface ILoanVaultInterface extends Interface {
     getFunction(nameOrSignature: "calculateInterest" | "calculateTotalOwed" | "declareDefault" | "getLoan" | "originateLoan" | "repayLoan"): FunctionFragment;
@@ -29,7 +29,7 @@ decodeFunctionResult(functionFragment: 'originateLoan', data: BytesLike): Result
 decodeFunctionResult(functionFragment: 'repayLoan', data: BytesLike): Result;
   }
 
-
+  
     export namespace CollateralSeizedEvent {
       export type InputTuple = [loanId: BigNumberish, lender: AddressLike, amount: BigNumberish];
       export type OutputTuple = [loanId: bigint, lender: string, amount: bigint];
@@ -40,7 +40,7 @@ decodeFunctionResult(functionFragment: 'repayLoan', data: BytesLike): Result;
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
     export namespace LoanDefaultedEvent {
       export type InputTuple = [loanId: BigNumberish];
@@ -52,7 +52,7 @@ decodeFunctionResult(functionFragment: 'repayLoan', data: BytesLike): Result;
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
     export namespace LoanOriginatedEvent {
       export type InputTuple = [loanId: BigNumberish, borrower: AddressLike, lender: AddressLike, principal: BigNumberish];
@@ -64,7 +64,7 @@ decodeFunctionResult(functionFragment: 'repayLoan', data: BytesLike): Result;
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
     export namespace LoanRepaidEvent {
       export type InputTuple = [loanId: BigNumberish, amount: BigNumberish];
@@ -76,16 +76,16 @@ decodeFunctionResult(functionFragment: 'repayLoan', data: BytesLike): Result;
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
   export interface ILoanVault extends BaseContract {
-
+    
     connect(runner?: ContractRunner | null): ILoanVault;
     waitForDeployment(): Promise<this>;
 
     interface: ILoanVaultInterface;
 
-
+    
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
@@ -99,7 +99,7 @@ decodeFunctionResult(functionFragment: 'repayLoan', data: BytesLike): Result;
 
   on<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   on<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
-
+  
   once<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   once<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
 
@@ -110,54 +110,54 @@ decodeFunctionResult(functionFragment: 'repayLoan', data: BytesLike): Result;
   removeAllListeners<TCEvent extends TypedContractEvent>(event?: TCEvent): Promise<this>
 
 
-
-
+    
+    
     calculateInterest: TypedContractMethod<
       [loanId: BigNumberish, ],
       [bigint],
       'view'
     >
+    
 
-
-
+    
     calculateTotalOwed: TypedContractMethod<
       [loanId: BigNumberish, ],
       [bigint],
       'view'
     >
+    
 
-
-
+    
     declareDefault: TypedContractMethod<
       [loanId: BigNumberish, ],
       [void],
       'nonpayable'
     >
+    
 
-
-
+    
     getLoan: TypedContractMethod<
       [loanId: BigNumberish, ],
       [LoanStructOutput],
       'view'
     >
+    
 
-
-
+    
     originateLoan: TypedContractMethod<
       [borrower: AddressLike, lender: AddressLike, principal: BigNumberish, aprBps: BigNumberish, duration: BigNumberish, collateralAmount: BigNumberish, ],
       [bigint],
       'payable'
     >
+    
 
-
-
+    
     repayLoan: TypedContractMethod<
       [loanId: BigNumberish, ],
       [void],
       'payable'
     >
-
+    
 
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
@@ -199,21 +199,21 @@ getEvent(key: 'LoanOriginated'): TypedContractEvent<LoanOriginatedEvent.InputTup
 getEvent(key: 'LoanRepaid'): TypedContractEvent<LoanRepaidEvent.InputTuple, LoanRepaidEvent.OutputTuple, LoanRepaidEvent.OutputObject>;
 
     filters: {
-
+      
       'CollateralSeized(uint256,address,uint256)': TypedContractEvent<CollateralSeizedEvent.InputTuple, CollateralSeizedEvent.OutputTuple, CollateralSeizedEvent.OutputObject>;
       CollateralSeized: TypedContractEvent<CollateralSeizedEvent.InputTuple, CollateralSeizedEvent.OutputTuple, CollateralSeizedEvent.OutputObject>;
-
+    
 
       'LoanDefaulted(uint256)': TypedContractEvent<LoanDefaultedEvent.InputTuple, LoanDefaultedEvent.OutputTuple, LoanDefaultedEvent.OutputObject>;
       LoanDefaulted: TypedContractEvent<LoanDefaultedEvent.InputTuple, LoanDefaultedEvent.OutputTuple, LoanDefaultedEvent.OutputObject>;
-
+    
 
       'LoanOriginated(uint256,address,address,uint256)': TypedContractEvent<LoanOriginatedEvent.InputTuple, LoanOriginatedEvent.OutputTuple, LoanOriginatedEvent.OutputObject>;
       LoanOriginated: TypedContractEvent<LoanOriginatedEvent.InputTuple, LoanOriginatedEvent.OutputTuple, LoanOriginatedEvent.OutputObject>;
-
+    
 
       'LoanRepaid(uint256,uint256)': TypedContractEvent<LoanRepaidEvent.InputTuple, LoanRepaidEvent.OutputTuple, LoanRepaidEvent.OutputObject>;
       LoanRepaid: TypedContractEvent<LoanRepaidEvent.InputTuple, LoanRepaidEvent.OutputTuple, LoanRepaidEvent.OutputObject>;
-
+    
     };
   }

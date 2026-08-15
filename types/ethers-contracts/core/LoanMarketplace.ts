@@ -3,16 +3,16 @@
 /* eslint-disable */
 import type { BaseContract, BigNumberish, BytesLike, FunctionFragment, Result, Interface, EventFragment, AddressLike, ContractRunner, ContractMethod, Listener } from "ethers"
 import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, TypedLogDescription, TypedListener, TypedContractMethod } from "../common.js"
-
+  
     export type BorrowRequestStruct = {requestId: BigNumberish, borrower: AddressLike, amount: BigNumberish, maxAprBps: BigNumberish, maxDuration: BigNumberish, collateralAmount: BigNumberish, status: BigNumberish, createdAt: BigNumberish}
 
     export type BorrowRequestStructOutput = [requestId: bigint, borrower: string, amount: bigint, maxAprBps: bigint, maxDuration: bigint, collateralAmount: bigint, status: bigint, createdAt: bigint] & {requestId: bigint, borrower: string, amount: bigint, maxAprBps: bigint, maxDuration: bigint, collateralAmount: bigint, status: bigint, createdAt: bigint }
-
+  
 
     export type LenderOfferStruct = {offerId: BigNumberish, requestId: BigNumberish, lender: AddressLike, aprBps: BigNumberish, duration: BigNumberish, requiredCollateral: BigNumberish, status: BigNumberish, createdAt: BigNumberish}
 
     export type LenderOfferStructOutput = [offerId: bigint, requestId: bigint, lender: string, aprBps: bigint, duration: bigint, requiredCollateral: bigint, status: bigint, createdAt: bigint] & {offerId: bigint, requestId: bigint, lender: string, aprBps: bigint, duration: bigint, requiredCollateral: bigint, status: bigint, createdAt: bigint }
-
+  
 
   export interface LoanMarketplaceInterface extends Interface {
     getFunction(nameOrSignature: "acceptOffer" | "cancelBorrowRequest" | "capacityManager" | "createBorrowRequest" | "createLenderOffer" | "eligibilityRegistry" | "getBorrowRequest" | "getLenderOffer" | "getOpenRequests" | "loanVault" | "nextOfferId" | "nextRequestId" | "offerDeposits" | "offers" | "owner" | "paused" | "renounceOwnership" | "requests" | "setLoanVault" | "transferOwnership" | "withdrawOffer"): FunctionFragment;
@@ -64,7 +64,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 decodeFunctionResult(functionFragment: 'withdrawOffer', data: BytesLike): Result;
   }
 
-
+  
     export namespace OfferAcceptedEvent {
       export type InputTuple = [offerId: BigNumberish, requestId: BigNumberish];
       export type OutputTuple = [offerId: bigint, requestId: bigint];
@@ -75,7 +75,7 @@ decodeFunctionResult(functionFragment: 'withdrawOffer', data: BytesLike): Result
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
     export namespace OfferCreatedEvent {
       export type InputTuple = [offerId: BigNumberish, requestId: BigNumberish, lender: AddressLike];
@@ -87,7 +87,7 @@ decodeFunctionResult(functionFragment: 'withdrawOffer', data: BytesLike): Result
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
     export namespace OfferWithdrawnEvent {
       export type InputTuple = [offerId: BigNumberish];
@@ -99,7 +99,7 @@ decodeFunctionResult(functionFragment: 'withdrawOffer', data: BytesLike): Result
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
     export namespace OwnershipTransferredEvent {
       export type InputTuple = [previousOwner: AddressLike, newOwner: AddressLike];
@@ -111,7 +111,7 @@ decodeFunctionResult(functionFragment: 'withdrawOffer', data: BytesLike): Result
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
     export namespace PausedEvent {
       export type InputTuple = [account: AddressLike];
@@ -123,7 +123,7 @@ decodeFunctionResult(functionFragment: 'withdrawOffer', data: BytesLike): Result
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
     export namespace RequestCancelledEvent {
       export type InputTuple = [requestId: BigNumberish];
@@ -135,7 +135,7 @@ decodeFunctionResult(functionFragment: 'withdrawOffer', data: BytesLike): Result
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
     export namespace RequestCreatedEvent {
       export type InputTuple = [requestId: BigNumberish, borrower: AddressLike, amount: BigNumberish];
@@ -147,7 +147,7 @@ decodeFunctionResult(functionFragment: 'withdrawOffer', data: BytesLike): Result
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
     export namespace UnpausedEvent {
       export type InputTuple = [account: AddressLike];
@@ -159,16 +159,16 @@ decodeFunctionResult(functionFragment: 'withdrawOffer', data: BytesLike): Result
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
   export interface LoanMarketplace extends BaseContract {
-
+    
     connect(runner?: ContractRunner | null): LoanMarketplace;
     waitForDeployment(): Promise<this>;
 
     interface: LoanMarketplaceInterface;
 
-
+    
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
@@ -182,7 +182,7 @@ decodeFunctionResult(functionFragment: 'withdrawOffer', data: BytesLike): Result
 
   on<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   on<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
-
+  
   once<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   once<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
 
@@ -193,174 +193,174 @@ decodeFunctionResult(functionFragment: 'withdrawOffer', data: BytesLike): Result
   removeAllListeners<TCEvent extends TypedContractEvent>(event?: TCEvent): Promise<this>
 
 
-
-
+    
+    
     acceptOffer: TypedContractMethod<
       [offerId: BigNumberish, ],
       [void],
       'payable'
     >
+    
 
-
-
+    
     cancelBorrowRequest: TypedContractMethod<
       [requestId: BigNumberish, ],
       [void],
       'nonpayable'
     >
+    
 
-
-
+    
     capacityManager: TypedContractMethod<
       [],
       [string],
       'view'
     >
+    
 
-
-
+    
     createBorrowRequest: TypedContractMethod<
       [amount: BigNumberish, maxAprBps: BigNumberish, maxDuration: BigNumberish, collateralAmount: BigNumberish, ],
       [bigint],
       'nonpayable'
     >
+    
 
-
-
+    
     createLenderOffer: TypedContractMethod<
       [requestId: BigNumberish, aprBps: BigNumberish, duration: BigNumberish, requiredCollateral: BigNumberish, ],
       [bigint],
       'payable'
     >
+    
 
-
-
+    
     eligibilityRegistry: TypedContractMethod<
       [],
       [string],
       'view'
     >
+    
 
-
-
+    
     getBorrowRequest: TypedContractMethod<
       [requestId: BigNumberish, ],
       [BorrowRequestStructOutput],
       'view'
     >
+    
 
-
-
+    
     getLenderOffer: TypedContractMethod<
       [offerId: BigNumberish, ],
       [LenderOfferStructOutput],
       'view'
     >
+    
 
-
-
+    
     getOpenRequests: TypedContractMethod<
       [],
       [BorrowRequestStructOutput[]],
       'view'
     >
+    
 
-
-
+    
     loanVault: TypedContractMethod<
       [],
       [string],
       'view'
     >
+    
 
-
-
+    
     nextOfferId: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
+    
 
-
-
+    
     nextRequestId: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
+    
 
-
-
+    
     offerDeposits: TypedContractMethod<
       [arg0: BigNumberish, ],
       [bigint],
       'view'
     >
+    
 
-
-
+    
     offers: TypedContractMethod<
       [arg0: BigNumberish, ],
       [[bigint, bigint, string, bigint, bigint, bigint, bigint, bigint] & {offerId: bigint, requestId: bigint, lender: string, aprBps: bigint, duration: bigint, requiredCollateral: bigint, status: bigint, createdAt: bigint }],
       'view'
     >
+    
 
-
-
+    
     owner: TypedContractMethod<
       [],
       [string],
       'view'
     >
+    
 
-
-
+    
     paused: TypedContractMethod<
       [],
       [boolean],
       'view'
     >
+    
 
-
-
+    
     renounceOwnership: TypedContractMethod<
       [],
       [void],
       'nonpayable'
     >
+    
 
-
-
+    
     requests: TypedContractMethod<
       [arg0: BigNumberish, ],
       [[bigint, string, bigint, bigint, bigint, bigint, bigint, bigint] & {requestId: bigint, borrower: string, amount: bigint, maxAprBps: bigint, maxDuration: bigint, collateralAmount: bigint, status: bigint, createdAt: bigint }],
       'view'
     >
+    
 
-
-
+    
     setLoanVault: TypedContractMethod<
       [_loanVault: AddressLike, ],
       [void],
       'nonpayable'
     >
+    
 
-
-
+    
     transferOwnership: TypedContractMethod<
       [newOwner: AddressLike, ],
       [void],
       'nonpayable'
     >
+    
 
-
-
+    
     withdrawOffer: TypedContractMethod<
       [offerId: BigNumberish, ],
       [void],
       'nonpayable'
     >
-
+    
 
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
@@ -481,37 +481,37 @@ getEvent(key: 'RequestCreated'): TypedContractEvent<RequestCreatedEvent.InputTup
 getEvent(key: 'Unpaused'): TypedContractEvent<UnpausedEvent.InputTuple, UnpausedEvent.OutputTuple, UnpausedEvent.OutputObject>;
 
     filters: {
-
+      
       'OfferAccepted(uint256,uint256)': TypedContractEvent<OfferAcceptedEvent.InputTuple, OfferAcceptedEvent.OutputTuple, OfferAcceptedEvent.OutputObject>;
       OfferAccepted: TypedContractEvent<OfferAcceptedEvent.InputTuple, OfferAcceptedEvent.OutputTuple, OfferAcceptedEvent.OutputObject>;
-
+    
 
       'OfferCreated(uint256,uint256,address)': TypedContractEvent<OfferCreatedEvent.InputTuple, OfferCreatedEvent.OutputTuple, OfferCreatedEvent.OutputObject>;
       OfferCreated: TypedContractEvent<OfferCreatedEvent.InputTuple, OfferCreatedEvent.OutputTuple, OfferCreatedEvent.OutputObject>;
-
+    
 
       'OfferWithdrawn(uint256)': TypedContractEvent<OfferWithdrawnEvent.InputTuple, OfferWithdrawnEvent.OutputTuple, OfferWithdrawnEvent.OutputObject>;
       OfferWithdrawn: TypedContractEvent<OfferWithdrawnEvent.InputTuple, OfferWithdrawnEvent.OutputTuple, OfferWithdrawnEvent.OutputObject>;
-
+    
 
       'OwnershipTransferred(address,address)': TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
       OwnershipTransferred: TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
-
+    
 
       'Paused(address)': TypedContractEvent<PausedEvent.InputTuple, PausedEvent.OutputTuple, PausedEvent.OutputObject>;
       Paused: TypedContractEvent<PausedEvent.InputTuple, PausedEvent.OutputTuple, PausedEvent.OutputObject>;
-
+    
 
       'RequestCancelled(uint256)': TypedContractEvent<RequestCancelledEvent.InputTuple, RequestCancelledEvent.OutputTuple, RequestCancelledEvent.OutputObject>;
       RequestCancelled: TypedContractEvent<RequestCancelledEvent.InputTuple, RequestCancelledEvent.OutputTuple, RequestCancelledEvent.OutputObject>;
-
+    
 
       'RequestCreated(uint256,address,uint256)': TypedContractEvent<RequestCreatedEvent.InputTuple, RequestCreatedEvent.OutputTuple, RequestCreatedEvent.OutputObject>;
       RequestCreated: TypedContractEvent<RequestCreatedEvent.InputTuple, RequestCreatedEvent.OutputTuple, RequestCreatedEvent.OutputObject>;
-
+    
 
       'Unpaused(address)': TypedContractEvent<UnpausedEvent.InputTuple, UnpausedEvent.OutputTuple, UnpausedEvent.OutputObject>;
       Unpaused: TypedContractEvent<UnpausedEvent.InputTuple, UnpausedEvent.OutputTuple, UnpausedEvent.OutputObject>;
-
+    
     };
   }

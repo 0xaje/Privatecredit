@@ -1,0 +1,59 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_23-f22543fac0c13985138aebde28e5f10e1375e11c",
+  "solcVersion": "0.8.23",
+  "solcLongVersion": "0.8.23+commit.f704f362",
+  "compilerType": "solc",
+  "toolVersions": {
+    "hardhat": "3.13.0"
+  },
+  "userSourceNameMap": {
+    "contracts/core/ArtefactRegistry.sol": "project/contracts/core/ArtefactRegistry.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "shanghai",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": [],
+      "viaIR": true
+    },
+    "sources": {
+      "project/contracts/core/ArtefactRegistry.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.20;\r\n\r\nimport \"../libraries/CreditTypes.sol\";\r\nimport \"../interfaces/IArtefactRegistry.sol\";\r\nimport \"../interfaces/IEligibilityRegistry.sol\";\r\n\r\ncontract ArtefactRegistry is IArtefactRegistry {\r\n    mapping(bytes32 => Artefact) public artefacts;\r\n    mapping(address => bytes32[]) public creatorArtefacts;\r\n    IEligibilityRegistry public immutable eligibilityRegistry;\r\n\r\n    error InvalidArtefact();\r\n    error EligibilityNonceMismatch(uint256 expected, uint256 provided);\r\n    error EligibilityRequired();\r\n\r\n    constructor(address _eligibilityRegistry) {\r\n        require(_eligibilityRegistry != address(0), \"zero eligibility registry\");\r\n        eligibilityRegistry = IEligibilityRegistry(_eligibilityRegistry);\r\n    }\r\n\r\n    function commitArtefact(\r\n        bytes32 snapshotCommitment,\r\n        uint256 eligibilityNonce,\r\n        bytes32 policyReference,\r\n        string calldata contentReference\r\n    ) external {\r\n        if (snapshotCommitment == bytes32(0) || policyReference == bytes32(0) || bytes(contentReference).length == 0) {\r\n            revert InvalidArtefact();\r\n        }\r\n        Eligibility memory eligibility = eligibilityRegistry.getEligibility(msg.sender);\r\n        if (!eligibility.active || block.timestamp >= eligibility.validUntil) revert EligibilityRequired();\r\n        if (eligibility.nonce != eligibilityNonce) revert EligibilityNonceMismatch(eligibility.nonce, eligibilityNonce);\r\n\r\n        bytes32 artefactId = keccak256(abi.encode(\r\n            msg.sender,\r\n            snapshotCommitment,\r\n            eligibilityNonce,\r\n            policyReference,\r\n            contentReference\r\n        ));\r\n        if (artefacts[artefactId].timestamp != 0) revert ArtefactAlreadyExists();\r\n\r\n        artefacts[artefactId] = Artefact({\r\n            artefactId: artefactId,\r\n            creator: msg.sender,\r\n            snapshotCommitment: snapshotCommitment,\r\n            eligibilityNonce: eligibilityNonce,\r\n            policyReference: policyReference,\r\n            timestamp: block.timestamp,\r\n            contentReference: contentReference\r\n        });\r\n        creatorArtefacts[msg.sender].push(artefactId);\r\n        emit ArtefactCommitted(artefactId, msg.sender, snapshotCommitment);\r\n    }\r\n\r\n    function getArtefact(bytes32 artefactId) external view returns (Artefact memory) {\r\n        return artefacts[artefactId];\r\n    }\r\n\r\n    function verifyArtefact(bytes32 artefactId, bytes32 snapshotCommitment) external view returns (bool) {\r\n        return artefacts[artefactId].snapshotCommitment == snapshotCommitment;\r\n    }\r\n\r\n    function getArtefactsByCreator(address creator) external view returns (bytes32[] memory) {\r\n        return creatorArtefacts[creator];\r\n    }\r\n}\r\n"
+      },
+      "project/contracts/interfaces/IArtefactRegistry.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.20;\r\n\r\nimport {Artefact, VerificationStatus} from \"../libraries/CreditTypes.sol\";\r\n\r\ninterface IArtefactRegistry {\r\n    event ArtefactCommitted(bytes32 indexed artefactId, address indexed creator, bytes32 snapshotCommitment);\r\n    event ArtefactVerified(bytes32 indexed artefactId, VerificationStatus status);\r\n\r\n    error ArtefactNotFound(bytes32 artefactId);\r\n    error ArtefactAlreadyExists();\r\n\r\n    /**\r\n     * @notice Commits a new artefact to the registry\r\n     * @param snapshotCommitment The snapshot commitment\r\n     * @param eligibilityNonce The associated eligibility nonce\r\n     * @param policyReference The policy reference\r\n     * @param contentReference The IPFS/content URI string\r\n     */\r\n    function commitArtefact(\r\n        bytes32 snapshotCommitment,\r\n        uint256 eligibilityNonce,\r\n        bytes32 policyReference,\r\n        string calldata contentReference\r\n    ) external;\r\n\r\n    /**\r\n     * @notice Retrieves an artefact by ID\r\n     * @param artefactId The ID of the artefact\r\n     * @return The Artefact struct\r\n     */\r\n    function getArtefact(bytes32 artefactId) external view returns (Artefact memory);\r\n\r\n    /**\r\n     * @notice Updates the verification status of an artefact\r\n     * @param artefactId The ID of the artefact\r\n     * @param snapshotCommitment The verification status\r\n     */\r\n    function verifyArtefact(bytes32 artefactId, bytes32 snapshotCommitment) external view returns (bool);\r\n\r\n    /**\r\n     * @notice Retrieves all artefacts committed by a creator\r\n     * @param creator The creator's address\r\n     * @return An array of Artefact structs\r\n     */\r\n    function getArtefactsByCreator(address creator) external view returns (bytes32[] memory);\r\n}\r\n"
+      },
+      "project/contracts/interfaces/IEligibilityRegistry.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.20;\r\n\r\nimport {Eligibility, RiskTier} from \"../libraries/CreditTypes.sol\";\r\n\r\ninterface IEligibilityRegistry {\r\n    event EligibilityRegistered(address indexed borrower, uint256 nonce);\r\n    event EligibilityRevoked(address indexed borrower, uint256 nonce);\r\n    event EligibilityExpired(address indexed borrower, uint256 nonce);\r\n\r\n    error EligibilityNotFound(address borrower);\r\n    error EligibilityExpiredError(address borrower);\r\n    error EligibilityAlreadyActive(address borrower);\r\n    error UnauthorizedRegistrar();\r\n\r\n    /**\r\n     * @notice Registers a new eligibility for a borrower\r\n     * @param borrower The borrower address\r\n     * @param riskTier The risk tier assigned\r\n     * @param maxActiveCredit The max credit available\r\n     * @param maxLtvBps The max LTV in basis points\r\n     * @param policyVersion The policy version\r\n     * @param evidenceCommitment The evidence commitment\r\n     * @param attestcoinContext The attestcoin context\r\n     */\r\n    function registerEligibility(\r\n        address borrower,\r\n        RiskTier riskTier,\r\n        uint256 maxActiveCredit,\r\n        uint256 maxLtvBps,\r\n        uint256 validUntil,\r\n        uint256 policyVersion,\r\n        bytes32 evidenceCommitment,\r\n        bytes32 attestcoinContext\r\n    ) external;\r\n\r\n    /**\r\n     * @notice Revokes an active eligibility\r\n     * @param borrower The borrower address\r\n     */\r\n    function revokeEligibility(address borrower) external;\r\n\r\n    /**\r\n     * @notice Retrieves the eligibility data for a borrower\r\n     * @param borrower The borrower address\r\n     * @return The Eligibility struct\r\n     */\r\n    function getEligibility(address borrower) external view returns (Eligibility memory);\r\n\r\n    /**\r\n     * @notice Checks if the eligibility for a borrower is valid\r\n     * @param borrower The borrower address\r\n     * @return True if valid, false otherwise\r\n     */\r\n    function isEligibilityValid(address borrower) external view returns (bool);\r\n\r\n    /**\r\n     * @notice Retrieves the current eligibility nonce for a borrower\r\n     * @param borrower The borrower address\r\n     * @return The nonce\r\n     */\r\n    function getEligibilityNonce(address borrower) external view returns (uint256);\r\n}\r\n"
+      },
+      "project/contracts/libraries/CreditTypes.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.20;\r\n\r\nenum RiskTier { LOW, MEDIUM, HIGH }\r\nenum RequestStatus { OPEN, FUNDED, CANCELLED }\r\nenum OfferStatus { PENDING, ACCEPTED, WITHDRAWN }\r\nenum LoanStatus { ACTIVE, REPAID, DEFAULTED }\r\nenum RepaymentOutcome { ON_TIME, LATE, DEFAULT }\r\nenum VerificationStatus { PENDING, CONFIRMED, REJECTED, EXPIRED }\r\n\r\nstruct Eligibility {\r\n    address borrower;\r\n    RiskTier riskTier;\r\n    uint256 maxActiveCredit;\r\n    uint256 maxLtvBps;\r\n    uint256 validUntil;\r\n    uint256 policyVersion;\r\n    bytes32 evidenceCommitment;\r\n    bytes32 attestcoinContext;\r\n    uint256 nonce;\r\n    bool active;\r\n}\r\n\r\nstruct BorrowRequest {\r\n    uint256 requestId;\r\n    address borrower;\r\n    uint256 amount;\r\n    uint256 maxAprBps;\r\n    uint256 maxDuration;\r\n    uint256 collateralAmount;\r\n    RequestStatus status;\r\n    uint256 createdAt;\r\n}\r\n\r\nstruct LenderOffer {\r\n    uint256 offerId;\r\n    uint256 requestId;\r\n    address lender;\r\n    uint256 aprBps;\r\n    uint256 duration;\r\n    uint256 requiredCollateral;\r\n    OfferStatus status;\r\n    uint256 createdAt;\r\n}\r\n\r\nstruct Loan {\r\n    uint256 loanId;\r\n    address borrower;\r\n    address lender;\r\n    uint256 principal;\r\n    uint256 aprBps;\r\n    uint256 startTime;\r\n    uint256 duration;\r\n    uint256 collateralAmount;\r\n    uint256 repaidAmount;\r\n    LoanStatus status;\r\n}\r\n\r\nstruct RepaymentRecord {\r\n    uint256 loanId;\r\n    address borrower;\r\n    uint256 amount;\r\n    uint256 timestamp;\r\n    RepaymentOutcome outcome;\r\n}\r\n\r\nstruct Artefact {\r\n    bytes32 artefactId;\r\n    address creator;\r\n    bytes32 snapshotCommitment;\r\n    uint256 eligibilityNonce;\r\n    bytes32 policyReference;\r\n    uint256 timestamp;\r\n    string contentReference;\r\n}\r\n"
+      }
+    }
+  }
+}

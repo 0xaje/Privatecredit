@@ -3,45 +3,45 @@
 /* eslint-disable */
 import type { BaseContract, BigNumberish, BytesLike, FunctionFragment, Result, Interface, ContractRunner, ContractMethod, Listener } from "ethers"
 import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, TypedListener, TypedContractMethod } from "../../common.js"
-
+  
 export declare namespace INativeQueryVerifier {
-
+      
     export type MerkleProofEntryStruct = {hash: BytesLike, isLeft: boolean}
 
     export type MerkleProofEntryStructOutput = [hash: string, isLeft: boolean] & {hash: string, isLeft: boolean }
-
+  
 
     export type MerkleProofStruct = {root: BytesLike, siblings: INativeQueryVerifier.MerkleProofEntryStruct[]}
 
     export type MerkleProofStructOutput = [root: string, siblings: INativeQueryVerifier.MerkleProofEntryStructOutput[]] & {root: string, siblings: INativeQueryVerifier.MerkleProofEntryStructOutput[] }
-
+  
 
     export type ContinuityProofStruct = {lowerEndpointDigest: BytesLike, roots: BytesLike[]}
 
     export type ContinuityProofStructOutput = [lowerEndpointDigest: string, roots: string[]] & {lowerEndpointDigest: string, roots: string[] }
-
+  
     }
 
   export interface INativeQueryVerifierInterface extends Interface {
     getFunction(nameOrSignature: "verify"): FunctionFragment;
 
-
+    
 
     encodeFunctionData(functionFragment: 'verify', values: [BigNumberish, BigNumberish, BytesLike, INativeQueryVerifier.MerkleProofStruct, INativeQueryVerifier.ContinuityProofStruct]): string;
 
     decodeFunctionResult(functionFragment: 'verify', data: BytesLike): Result;
   }
 
-
+  
 
   export interface INativeQueryVerifier extends BaseContract {
-
+    
     connect(runner?: ContractRunner | null): INativeQueryVerifier;
     waitForDeployment(): Promise<this>;
 
     interface: INativeQueryVerifierInterface;
 
-
+    
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
@@ -55,7 +55,7 @@ export declare namespace INativeQueryVerifier {
 
   on<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   on<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
-
+  
   once<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   once<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
 
@@ -66,14 +66,14 @@ export declare namespace INativeQueryVerifier {
   removeAllListeners<TCEvent extends TypedContractEvent>(event?: TCEvent): Promise<this>
 
 
-
-
+    
+    
     verify: TypedContractMethod<
       [chainKey: BigNumberish, height: BigNumberish, encodedTransaction: BytesLike, merkleProof: INativeQueryVerifier.MerkleProofStruct, continuityProof: INativeQueryVerifier.ContinuityProofStruct, ],
       [boolean],
       'view'
     >
-
+    
 
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
@@ -84,9 +84,9 @@ export declare namespace INativeQueryVerifier {
       'view'
     >;
 
-
+    
 
     filters: {
-
+      
     };
   }

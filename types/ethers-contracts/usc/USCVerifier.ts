@@ -3,13 +3,13 @@
 /* eslint-disable */
 import type { BaseContract, BigNumberish, BytesLike, FunctionFragment, Result, Interface, EventFragment, AddressLike, ContractRunner, ContractMethod, Listener } from "ethers"
 import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, TypedLogDescription, TypedListener, TypedContractMethod } from "../common.js"
-
+  
 export declare namespace INativeQueryVerifier {
-
+      
     export type MerkleProofEntryStruct = {hash: BytesLike, isLeft: boolean}
 
     export type MerkleProofEntryStructOutput = [hash: string, isLeft: boolean] & {hash: string, isLeft: boolean }
-
+  
     }
 
   export interface USCVerifierInterface extends Interface {
@@ -60,7 +60,7 @@ decodeFunctionResult(functionFragment: 'verifier', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'verifyEvidence', data: BytesLike): Result;
   }
 
-
+  
     export namespace EligibilityRegisteredFromEvidenceEvent {
       export type InputTuple = [borrower: AddressLike, nonce: BigNumberish, evidenceCommitment: BytesLike, attestcoinContext: BytesLike];
       export type OutputTuple = [borrower: string, nonce: bigint, evidenceCommitment: string, attestcoinContext: string];
@@ -71,7 +71,7 @@ decodeFunctionResult(functionFragment: 'verifyEvidence', data: BytesLike): Resul
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
     export namespace EvidenceVerifiedEvent {
       export type InputTuple = [queryId: BytesLike, evidenceId: BytesLike, borrower: AddressLike, chainKey: BigNumberish, blockHeight: BigNumberish, token: AddressLike, sender: AddressLike, amount: BigNumberish, evidenceType: BigNumberish, transactionHash: BytesLike];
@@ -83,7 +83,7 @@ decodeFunctionResult(functionFragment: 'verifyEvidence', data: BytesLike): Resul
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
     export namespace OwnershipTransferredEvent {
       export type InputTuple = [previousOwner: AddressLike, newOwner: AddressLike];
@@ -95,7 +95,7 @@ decodeFunctionResult(functionFragment: 'verifyEvidence', data: BytesLike): Resul
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
     export namespace SourceTokenConfiguredEvent {
       export type InputTuple = [sourceChainId: BigNumberish, sourceChainKey: BigNumberish, sourceToken: AddressLike];
@@ -107,16 +107,16 @@ decodeFunctionResult(functionFragment: 'verifyEvidence', data: BytesLike): Resul
       export type LogDescription = TypedLogDescription<Event>
     }
 
-
+  
 
   export interface USCVerifier extends BaseContract {
-
+    
     connect(runner?: ContractRunner | null): USCVerifier;
     waitForDeployment(): Promise<this>;
 
     interface: USCVerifierInterface;
 
-
+    
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
@@ -130,7 +130,7 @@ decodeFunctionResult(functionFragment: 'verifyEvidence', data: BytesLike): Resul
 
   on<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   on<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
-
+  
   once<TCEvent extends TypedContractEvent>(event: TCEvent, listener: TypedListener<TCEvent>): Promise<this>
   once<TCEvent extends TypedContractEvent>(filter: TypedDeferredTopicFilter<TCEvent>, listener: TypedListener<TCEvent>): Promise<this>
 
@@ -141,166 +141,166 @@ decodeFunctionResult(functionFragment: 'verifyEvidence', data: BytesLike): Resul
   removeAllListeners<TCEvent extends TypedContractEvent>(event?: TCEvent): Promise<this>
 
 
-
-
+    
+    
     BPS_DENOMINATOR: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
+    
 
-
-
+    
     POLICY_VERSION: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
+    
 
-
-
+    
     TRANSFER_EVENT_SIGNATURE: TypedContractMethod<
       [],
       [string],
       'view'
     >
+    
 
-
-
+    
     borrowerEvidenceNonces: TypedContractMethod<
       [arg0: AddressLike, ],
       [bigint],
       'view'
     >
+    
 
-
-
+    
     eligibilityRegistry: TypedContractMethod<
       [],
       [string],
       'view'
     >
+    
 
-
-
+    
     evidenceUsedForEligibility: TypedContractMethod<
       [arg0: BytesLike, ],
       [boolean],
       'view'
     >
+    
 
-
-
+    
     owner: TypedContractMethod<
       [],
       [string],
       'view'
     >
+    
 
-
-
+    
     processedEvidence: TypedContractMethod<
       [arg0: BytesLike, ],
       [boolean],
       'view'
     >
+    
 
-
-
+    
     processedQueries: TypedContractMethod<
       [arg0: BytesLike, ],
       [boolean],
       'view'
     >
+    
 
-
-
+    
     registerEligibilityFromEvidence: TypedContractMethod<
       [borrower: AddressLike, riskTier: BigNumberish, maxActiveCredit: BigNumberish, maxLtvBps: BigNumberish, validUntil: BigNumberish, evidenceIds: BytesLike[], ],
       [void],
       'nonpayable'
     >
+    
 
-
-
+    
     renounceOwnership: TypedContractMethod<
       [],
       [void],
       'nonpayable'
     >
+    
 
-
-
+    
     setSourceChainKey: TypedContractMethod<
       [_sourceChainKey: BigNumberish, ],
       [void],
       'nonpayable'
     >
+    
 
-
-
+    
     setSourceToken: TypedContractMethod<
       [_sourceChainId: BigNumberish, _sourceToken: AddressLike, ],
       [void],
       'nonpayable'
     >
+    
 
-
-
+    
     sourceChainId: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
+    
 
-
-
+    
     sourceChainKey: TypedContractMethod<
       [],
       [bigint],
       'view'
     >
+    
 
-
-
+    
     sourceToken: TypedContractMethod<
       [],
       [string],
       'view'
     >
+    
 
-
-
+    
     transferOwnership: TypedContractMethod<
       [newOwner: AddressLike, ],
       [void],
       'nonpayable'
     >
+    
 
-
-
+    
     verifiedEvidence: TypedContractMethod<
       [arg0: BytesLike, ],
       [[string, bigint, bigint, bigint, string, string, bigint, string, boolean] & {borrower: string, evidenceType: bigint, chainKey: bigint, blockHeight: bigint, token: string, sender: string, amount: bigint, transactionHash: string, active: boolean }],
       'view'
     >
+    
 
-
-
+    
     verifier: TypedContractMethod<
       [],
       [string],
       'view'
     >
+    
 
-
-
+    
     verifyEvidence: TypedContractMethod<
       [evidenceType: BigNumberish, borrower: AddressLike, chainKey: BigNumberish, blockHeight: BigNumberish, encodedTransaction: BytesLike, merkleRoot: BytesLike, siblings: INativeQueryVerifier.MerkleProofEntryStruct[], lowerEndpointDigest: BytesLike, continuityRoots: BytesLike[], ],
       [[string, bigint, string] & {evidenceId: string, amount: bigint, transactionHash: string }],
       'nonpayable'
     >
-
+    
 
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
@@ -412,21 +412,21 @@ getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEv
 getEvent(key: 'SourceTokenConfigured'): TypedContractEvent<SourceTokenConfiguredEvent.InputTuple, SourceTokenConfiguredEvent.OutputTuple, SourceTokenConfiguredEvent.OutputObject>;
 
     filters: {
-
+      
       'EligibilityRegisteredFromEvidence(address,uint256,bytes32,bytes32)': TypedContractEvent<EligibilityRegisteredFromEvidenceEvent.InputTuple, EligibilityRegisteredFromEvidenceEvent.OutputTuple, EligibilityRegisteredFromEvidenceEvent.OutputObject>;
       EligibilityRegisteredFromEvidence: TypedContractEvent<EligibilityRegisteredFromEvidenceEvent.InputTuple, EligibilityRegisteredFromEvidenceEvent.OutputTuple, EligibilityRegisteredFromEvidenceEvent.OutputObject>;
-
+    
 
       'EvidenceVerified(bytes32,bytes32,address,uint64,uint64,address,address,uint256,uint8,bytes32)': TypedContractEvent<EvidenceVerifiedEvent.InputTuple, EvidenceVerifiedEvent.OutputTuple, EvidenceVerifiedEvent.OutputObject>;
       EvidenceVerified: TypedContractEvent<EvidenceVerifiedEvent.InputTuple, EvidenceVerifiedEvent.OutputTuple, EvidenceVerifiedEvent.OutputObject>;
-
+    
 
       'OwnershipTransferred(address,address)': TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
       OwnershipTransferred: TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
-
+    
 
       'SourceTokenConfigured(uint256,uint64,address)': TypedContractEvent<SourceTokenConfiguredEvent.InputTuple, SourceTokenConfiguredEvent.OutputTuple, SourceTokenConfiguredEvent.OutputObject>;
       SourceTokenConfigured: TypedContractEvent<SourceTokenConfiguredEvent.InputTuple, SourceTokenConfiguredEvent.OutputTuple, SourceTokenConfiguredEvent.OutputObject>;
-
+    
     };
   }
