@@ -7,7 +7,7 @@ import { ethers } from 'ethers';
 const EXPECTED_CHAIN_ID = 102031n;
 const EXPECTED_DEPLOYER = '0xD29CC27f6D1545158a935EC97001ab3967FA4ee1';
 const DEFAULT_RPC_URL = 'https://rpc.cc3-testnet.creditcoin.network';
-const DEPLOYMENT_ID = 'privatecredit-cc3-live-v2';
+const DEPLOYMENT_ID = 'privatecredit-cc3-live-v3';
 
 const privateKey = process.env.DEPLOYER_PRIVATE_KEY;
 if (!privateKey) {
