@@ -18,3 +18,7 @@ When writing or modifying tests, configuring `hardhat.config.ts`, or interacting
 
 - Hardhat 3 — https://hardhat.org/llms.txt
 - ethers.js — https://docs.ethers.org/v6/
+
+## ETHSkills
+
+Read https://ethskills.com/SKILL.md and follow it before writing Solidity or shipping anything onchain.

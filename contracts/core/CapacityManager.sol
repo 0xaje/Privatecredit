@@ -27,6 +27,9 @@ contract CapacityManager is Ownable, ICapacityManager {
         _;
     }
 
+    /**
+     * @notice Reserves capacity for a borrower
+     */
     function reserveCapacity(address borrower, uint256 amount) external onlyAuthorized {
         if (borrower == address(0) || amount == 0) revert InvalidEligibility();
         if (!eligibilityRegistry.isEligibilityValid(borrower)) revert InvalidEligibility();
@@ -35,6 +38,9 @@ contract CapacityManager is Ownable, ICapacityManager {
         emit CapacityReserved(borrower, amount);
     }
 
+    /**
+     * @notice Releases previously reserved capacity
+     */
     function releaseCapacity(address borrower, uint256 amount) external onlyAuthorized {
         if (amount == 0 || amount > _usedCapacity[borrower]) revert InvalidCapacityRelease();
         _usedCapacity[borrower] -= amount;
@@ -48,6 +54,9 @@ contract CapacityManager is Ownable, ICapacityManager {
         emit DefaultCapacityLocked(borrower, amount);
     }
 
+    /**
+     * @notice Calculates the available capacity for a borrower, excluding defaulted locked exposure.
+     */
     function availableCapacity(address borrower) public view returns (uint256) {
         if (!eligibilityRegistry.isEligibilityValid(borrower)) return 0;
         Eligibility memory e = eligibilityRegistry.getEligibility(borrower);
@@ -56,6 +65,9 @@ contract CapacityManager is Ownable, ICapacityManager {
         return e.maxActiveCredit - consumed;
     }
 
+    /**
+     * @notice Gets the total actively reserved capacity for a borrower.
+     */
     function getUsedCapacity(address borrower) external view returns (uint256) {
         return _usedCapacity[borrower];
     }
@@ -68,6 +80,9 @@ contract CapacityManager is Ownable, ICapacityManager {
         return _usedCapacity[borrower] + _defaultedLockedCapacity[borrower];
     }
 
+    /**
+     * @notice Checks if a borrower can borrow a specific amount.
+     */
     function canBorrow(address borrower, uint256 amount) external view returns (bool) {
         return amount > 0 && availableCapacity(borrower) >= amount;
     }

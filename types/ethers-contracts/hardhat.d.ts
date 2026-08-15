@@ -10,73 +10,73 @@ import * as Contracts from "./index.js";
 
 declare module "@nomicfoundation/hardhat-ethers/types" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
-  getContractFactory(name: 'EvmV1Decoder', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.EvmV1Decoder__factory>
-getContractFactory(name: 'USCVerifier', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.USCVerifier__factory>
-getContractFactory(name: 'INativeQueryVerifier', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.INativeQueryVerifier__factory>
-getContractFactory(name: 'ArtefactRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ArtefactRegistry__factory>
-getContractFactory(name: 'EligibilityRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.EligibilityRegistry__factory>
+  getContractFactory(name: 'ArtefactRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ArtefactRegistry__factory>
 getContractFactory(name: 'CapacityManager', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CapacityManager__factory>
-getContractFactory(name: 'RepaymentRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.RepaymentRegistry__factory>
-getContractFactory(name: 'LoanVault', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.LoanVault__factory>
+getContractFactory(name: 'EligibilityRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.EligibilityRegistry__factory>
 getContractFactory(name: 'LoanMarketplace', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.LoanMarketplace__factory>
+getContractFactory(name: 'LoanVault', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.LoanVault__factory>
+getContractFactory(name: 'RepaymentRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.RepaymentRegistry__factory>
 getContractFactory(name: 'IArtefactRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IArtefactRegistry__factory>
 getContractFactory(name: 'ICapacityManager', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ICapacityManager__factory>
-getContractFactory(name: 'ILoanMarketplace', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ILoanMarketplace__factory>
 getContractFactory(name: 'IEligibilityRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IEligibilityRegistry__factory>
-getContractFactory(name: 'IRepaymentRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IRepaymentRegistry__factory>
+getContractFactory(name: 'ILoanMarketplace', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ILoanMarketplace__factory>
 getContractFactory(name: 'ILoanVault', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ILoanVault__factory>
+getContractFactory(name: 'IRepaymentRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IRepaymentRegistry__factory>
 getContractFactory(name: 'PolicyConstants', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.PolicyConstants__factory>
+getContractFactory(name: 'EvmV1Decoder', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.EvmV1Decoder__factory>
+getContractFactory(name: 'USCVerifier', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.USCVerifier__factory>
+getContractFactory(name: 'INativeQueryVerifier', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.INativeQueryVerifier__factory>
 
-  getContractAt(name: 'EvmV1Decoder', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.EvmV1Decoder>
-getContractAt(name: 'USCVerifier', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.USCVerifier>
-getContractAt(name: 'INativeQueryVerifier', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.INativeQueryVerifier>
-getContractAt(name: 'ArtefactRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ArtefactRegistry>
-getContractAt(name: 'EligibilityRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.EligibilityRegistry>
+  getContractAt(name: 'ArtefactRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ArtefactRegistry>
 getContractAt(name: 'CapacityManager', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CapacityManager>
-getContractAt(name: 'RepaymentRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.RepaymentRegistry>
-getContractAt(name: 'LoanVault', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.LoanVault>
+getContractAt(name: 'EligibilityRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.EligibilityRegistry>
 getContractAt(name: 'LoanMarketplace', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.LoanMarketplace>
+getContractAt(name: 'LoanVault', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.LoanVault>
+getContractAt(name: 'RepaymentRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.RepaymentRegistry>
 getContractAt(name: 'IArtefactRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IArtefactRegistry>
 getContractAt(name: 'ICapacityManager', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ICapacityManager>
-getContractAt(name: 'ILoanMarketplace', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ILoanMarketplace>
 getContractAt(name: 'IEligibilityRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IEligibilityRegistry>
-getContractAt(name: 'IRepaymentRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IRepaymentRegistry>
+getContractAt(name: 'ILoanMarketplace', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ILoanMarketplace>
 getContractAt(name: 'ILoanVault', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ILoanVault>
+getContractAt(name: 'IRepaymentRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IRepaymentRegistry>
 getContractAt(name: 'PolicyConstants', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.PolicyConstants>
+getContractAt(name: 'EvmV1Decoder', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.EvmV1Decoder>
+getContractAt(name: 'USCVerifier', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.USCVerifier>
+getContractAt(name: 'INativeQueryVerifier', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.INativeQueryVerifier>
 
-  deployContract(name: 'EvmV1Decoder', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.EvmV1Decoder>
-deployContract(name: 'USCVerifier', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.USCVerifier>
-deployContract(name: 'INativeQueryVerifier', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.INativeQueryVerifier>
-deployContract(name: 'ArtefactRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ArtefactRegistry>
-deployContract(name: 'EligibilityRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.EligibilityRegistry>
+  deployContract(name: 'ArtefactRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ArtefactRegistry>
 deployContract(name: 'CapacityManager', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CapacityManager>
-deployContract(name: 'RepaymentRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.RepaymentRegistry>
-deployContract(name: 'LoanVault', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.LoanVault>
+deployContract(name: 'EligibilityRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.EligibilityRegistry>
 deployContract(name: 'LoanMarketplace', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.LoanMarketplace>
+deployContract(name: 'LoanVault', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.LoanVault>
+deployContract(name: 'RepaymentRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.RepaymentRegistry>
 deployContract(name: 'IArtefactRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IArtefactRegistry>
 deployContract(name: 'ICapacityManager', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICapacityManager>
-deployContract(name: 'ILoanMarketplace', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ILoanMarketplace>
 deployContract(name: 'IEligibilityRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IEligibilityRegistry>
-deployContract(name: 'IRepaymentRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IRepaymentRegistry>
+deployContract(name: 'ILoanMarketplace', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ILoanMarketplace>
 deployContract(name: 'ILoanVault', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ILoanVault>
+deployContract(name: 'IRepaymentRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IRepaymentRegistry>
 deployContract(name: 'PolicyConstants', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.PolicyConstants>
+deployContract(name: 'EvmV1Decoder', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.EvmV1Decoder>
+deployContract(name: 'USCVerifier', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.USCVerifier>
+deployContract(name: 'INativeQueryVerifier', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.INativeQueryVerifier>
 
-  deployContract(name: 'EvmV1Decoder', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.EvmV1Decoder>
-deployContract(name: 'USCVerifier', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.USCVerifier>
-deployContract(name: 'INativeQueryVerifier', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.INativeQueryVerifier>
-deployContract(name: 'ArtefactRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ArtefactRegistry>
-deployContract(name: 'EligibilityRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.EligibilityRegistry>
+  deployContract(name: 'ArtefactRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ArtefactRegistry>
 deployContract(name: 'CapacityManager', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CapacityManager>
-deployContract(name: 'RepaymentRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.RepaymentRegistry>
-deployContract(name: 'LoanVault', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.LoanVault>
+deployContract(name: 'EligibilityRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.EligibilityRegistry>
 deployContract(name: 'LoanMarketplace', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.LoanMarketplace>
+deployContract(name: 'LoanVault', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.LoanVault>
+deployContract(name: 'RepaymentRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.RepaymentRegistry>
 deployContract(name: 'IArtefactRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IArtefactRegistry>
 deployContract(name: 'ICapacityManager', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICapacityManager>
-deployContract(name: 'ILoanMarketplace', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ILoanMarketplace>
 deployContract(name: 'IEligibilityRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IEligibilityRegistry>
-deployContract(name: 'IRepaymentRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IRepaymentRegistry>
+deployContract(name: 'ILoanMarketplace', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ILoanMarketplace>
 deployContract(name: 'ILoanVault', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ILoanVault>
+deployContract(name: 'IRepaymentRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IRepaymentRegistry>
 deployContract(name: 'PolicyConstants', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.PolicyConstants>
+deployContract(name: 'EvmV1Decoder', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.EvmV1Decoder>
+deployContract(name: 'USCVerifier', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.USCVerifier>
+deployContract(name: 'INativeQueryVerifier', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.INativeQueryVerifier>
 
     // default types
     getContractFactory(

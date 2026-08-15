@@ -8,6 +8,23 @@ enum LoanStatus { ACTIVE, REPAID, DEFAULTED }
 enum RepaymentOutcome { ON_TIME, LATE, DEFAULT }
 enum VerificationStatus { PENDING, CONFIRMED, REJECTED, EXPIRED }
 
+struct EligibilityParams {
+    RiskTier riskTier;
+    uint256 maxActiveCredit;
+    uint256 maxLtvBps;
+    uint256 validUntil;
+    uint256 policyVersion;
+    bytes32 evidenceCommitment;
+}
+
+struct AttestcoinProof {
+    uint64 chainKey;
+    uint64 headerNumber;
+    bytes txBytes;
+    bytes merkleProof;
+    bytes continuityProof;
+}
+
 struct Eligibility {
     address borrower;
     RiskTier riskTier;
