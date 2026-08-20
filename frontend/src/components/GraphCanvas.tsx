@@ -164,7 +164,6 @@ export default function GraphCanvas({ borrowerAddress, onNodeSelect, refreshTrig
       )}
       {!borrowerAddress && (
         <div className="graph-empty">
-          <div className="graph-empty-icon">◇</div>
           <h3>Connect a Wallet</h3>
           <p>Connect your wallet to view and build your credit graph.</p>
         </div>

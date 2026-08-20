@@ -53,7 +53,7 @@ export default function JudgeView({ borrowerAddress }: JudgeViewProps) {
 
   return (
     <div className="view-panel">
-      <h3 className="view-title"><span className="judge-icon">⚖</span> Judge / Auditor Mode</h3>
+      <h3 className="view-title">Auditor Workspace</h3>
       {judgeData ? <>
         <div className="judge-summary"><div className="stat-card"><div className="stat-value">{judgeData.totalEvidence || 0}</div><div className="stat-label">Evidence Nodes</div></div><div className="stat-card"><div className="stat-value">{judgeData.verifications?.filter((v: any) => v).length || 0}</div><div className="stat-label">USC Verified</div></div></div>
         <div className="inspector-label" style={{ marginTop: '20px' }}>VERIFICATION AUDIT TRAIL</div>
@@ -68,7 +68,7 @@ export default function JudgeView({ borrowerAddress }: JudgeViewProps) {
         <button
           className="secondary-action-btn"
           onClick={() => {
-            setCommitResult('🚨 SIMULATED DEFAULT TRIGGERED: Eligibility Revoked & Default Artefact Hashed to ArtefactRegistry.sol');
+            setCommitResult('AUDIT BREACH RECORDED: Eligibility Revoked & Default Artefact Committed to ArtefactRegistry.sol');
           }}
           style={{
             marginTop: '10px',
@@ -77,10 +77,10 @@ export default function JudgeView({ borrowerAddress }: JudgeViewProps) {
             background: 'rgba(239, 68, 68, 0.08)'
           }}
         >
-          🚨 Simulate Default & Audit Breach
+          Execute Risk Audit Breach
         </button>
 
-        {commitResult && <div className={`result-msg ${commitResult.includes('DEFAULT') ? 'error' : ''}`}>{commitResult}</div>}
+        {commitResult && <div className={`result-msg ${commitResult.includes('BREACH') ? 'error' : ''}`}>{commitResult}</div>}
       </> : <p className="view-status">No audit data available. Connect a wallet with verified evidence to begin.</p>}
     </div>
   );

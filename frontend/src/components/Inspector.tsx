@@ -11,7 +11,7 @@ export default function Inspector({ node, onAction }: InspectorProps) {
       <div className="inspector-panel">
         <h2 className="inspector-title">Inspector</h2>
         <div className="inspector-empty">
-          <div className="inspector-empty-icon">◇</div>
+          <div className="inspector-empty-icon">--</div>
           <p>Select a node in the graph to inspect its details.</p>
         </div>
       </div>
@@ -33,7 +33,7 @@ export default function Inspector({ node, onAction }: InspectorProps) {
         <>
           <Section label="Address" value={data.address} mono />
           <Section label="Linked Evidence" value={data.evidenceCount || '0'} />
-          <Section label="Eligibility" value={data.eligible ? '✓ Active' : '✗ None'} color={data.eligible ? '#10b981' : '#ef4444'} />
+          <Section label="Eligibility" value={data.eligible ? 'Active' : 'None'} color={data.eligible ? '#10b981' : '#ef4444'} />
         </>
       )}
 
@@ -56,9 +56,9 @@ export default function Inspector({ node, onAction }: InspectorProps) {
             border: '1px solid rgba(16,185,129,0.3)',
             boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                ◈ USC Receipt
+                USC Proof Receipt
               </span>
               <span style={{
                 background: '#10b981', color: '#000', fontSize: '0.65rem', fontWeight: 800,

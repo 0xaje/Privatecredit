@@ -8,8 +8,7 @@ export default function WalletNode({ data }: NodeProps) {
   return (
     <div className="custom-node wallet-node">
       <Handle type="target" position={Position.Top} style={{ background: '#818cf8' }} />
-      <div className="node-icon">◆</div>
-      <div className="node-label">WALLET</div>
+      <div className="node-label">BORROWER WALLET</div>
       <div className="node-value">{short}</div>
       <Handle type="source" position={Position.Bottom} style={{ background: '#818cf8' }} />
     </div>

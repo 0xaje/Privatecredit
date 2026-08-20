@@ -8,7 +8,9 @@ export default function EvidenceNode({ data }: NodeProps) {
   return (
     <div className={`custom-node evidence-node ${verified ? 'verified' : 'pending'}`}>
       <Handle type="target" position={Position.Top} style={{ background: verified ? '#10b981' : '#f59e0b' }} />
-      <div className="node-icon">{verified ? '✓' : '⏳'}</div>
+      <div className="node-badge" style={{ background: verified ? '#10b981' : '#f59e0b' }}>
+        {verified ? 'VERIFIED' : 'PENDING'}
+      </div>
       <div className="node-label">{data.type || 'EVIDENCE'}</div>
       {amount && <div className="node-value">{amount}</div>}
       <div className="node-chain">{data.sourceChain ? `Chain ${data.sourceChain}` : ''}</div>

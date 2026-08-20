@@ -101,31 +101,31 @@ function App() {
       {/* Top Navigation */}
       <header className="top-nav">
         <div className="logo">
-          <span className="logo-icon">◈</span> PRIVATECREDIT GRAPH
+          <Shield size={20} className="logo-icon-svg" style={{ color: '#818cf8' }} /> PRIVATECREDIT GRAPH
         </div>
         <div className="nav-links">
           {/* Preset Profile Quick Switcher */}
           <div className="preset-selector">
             <span style={{ fontSize: '0.72rem', color: '#9ca3af', fontWeight: 600, paddingLeft: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Presets:
+              Profiles:
             </span>
             <button
               className={`preset-btn ${wallet === '0x71c7656ec7ab88b098defb751b7401b5f6d8976f' ? 'active' : ''}`}
               onClick={() => setPresetAddress('0x71c7656ec7ab88b098defb751b7401b5f6d8976f')}
             >
-              👑 Whale (85)
+              Veteran (85)
             </button>
             <button
               className={`preset-btn ${wallet === '0x1111111111111111111111111111111111111111' ? 'active' : ''}`}
               onClick={() => setPresetAddress('0x1111111111111111111111111111111111111111')}
             >
-              🔰 New (55)
+              Standard (55)
             </button>
             <button
               className={`preset-btn ${wallet === '0x9999999999999999999999999999999999999999' ? 'active' : ''}`}
               onClick={() => setPresetAddress('0x9999999999999999999999999999999999999999')}
             >
-              🚨 High Risk (35)
+              High Risk (35)
             </button>
           </div>
 
@@ -141,7 +141,7 @@ function App() {
             }}
             style={{ cursor: 'pointer', color: judgeMode ? '#f59e0b' : undefined }}
           >
-            ⚖ Judge: {judgeMode ? 'ON' : 'OFF'}
+            <Shield size={14} style={{ marginRight: '4px' }} /> Auditor Mode: {judgeMode ? 'ON' : 'OFF'}
           </span>
           {isConnected && address ? (
             <button className="wallet-btn connected" onClick={() => void handleDisconnect()}>
@@ -244,7 +244,7 @@ function App() {
         </div>
         <div className="context-actions">
           <span className="status-item" style={{ color: '#6b7280', fontSize: '0.85rem' }}>
-            PrivateCredit × Creditcoin × Attestcoin
+            PrivateCredit / Creditcoin / Attestcoin
           </span>
         </div>
       </footer>
@@ -417,7 +417,7 @@ function AddEvidenceModal({ borrower, onClose, onSuccess }: { borrower: string; 
           {status === 'error' && <div className="result-msg error">{result}</div>}
 
           <button className="primary-action-btn" onClick={() => void (status === 'proof-ready' ? signProof() : handleSubmit())} disabled={['verifying', 'waiting', 'signing', 'done'].includes(status)}>
-            {status === 'idle' ? (existingRequestId.trim() ? 'Load Existing Proof' : 'Request Attestcoin Proof') : status === 'proof-ready' ? 'Verify on Creditcoin' : status === 'done' ? '✓ Done' : status === 'signing' ? 'Awaiting Signature...' : 'Generating Proof...'}
+            {status === 'idle' ? (existingRequestId.trim() ? 'Load Existing Proof' : 'Request Attestcoin Proof') : status === 'proof-ready' ? 'Verify on Creditcoin' : status === 'done' ? 'Completed' : status === 'signing' ? 'Awaiting Signature...' : 'Generating Proof...'}
           </button>
         </div>
       </div>

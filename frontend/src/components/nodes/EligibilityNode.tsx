@@ -13,8 +13,7 @@ export default function EligibilityNode({ data }: NodeProps) {
   return (
     <div className="custom-node eligibility-node">
       <Handle type="target" position={Position.Top} style={{ background: '#8b5cf6' }} />
-      <div className="node-icon">⬡</div>
-      <div className="node-label">ELIGIBILITY</div>
+      <div className="node-label">ELIGIBILITY BADGE</div>
       <div className="node-badge" style={{ background: tierColor }}>{tier} RISK</div>
       {maxCredit && <div className="node-value">Max: {maxCredit}</div>}
       {ltvPct && <div className="node-detail">LTV: {ltvPct}</div>}

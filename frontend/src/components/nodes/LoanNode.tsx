@@ -13,8 +13,7 @@ export default function LoanNode({ data }: NodeProps) {
   return (
     <div className="custom-node loan-node">
       <Handle type="target" position={Position.Top} style={{ background: '#ec4899' }} />
-      <div className="node-icon">⬢</div>
-      <div className="node-label">LOAN</div>
+      <div className="node-label">ACTIVE LOAN</div>
       <div className="node-badge" style={{ background: statusColor }}>{status}</div>
       {principal && <div className="node-value">{principal}</div>}
       {aprPct && <div className="node-detail">APR: {aprPct}</div>}
