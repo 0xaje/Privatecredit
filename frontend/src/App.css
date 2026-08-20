@@ -27,13 +27,31 @@
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   font-size: 1.5rem;
 }
-.nav-links { display: flex; gap: 20px; align-items: center; }
+.nav-links { display: flex; gap: 14px; align-items: center; }
 .nav-item {
-  color: var(--text-secondary); font-size: 0.9rem; font-weight: 500;
+  color: var(--text-secondary); font-size: 0.85rem; font-weight: 500;
   display: flex; align-items: center; gap: 6px;
   transition: color 0.2s;
 }
 .nav-item:hover { color: #fff; }
+
+/* Preset Profile Selector */
+.preset-selector {
+  display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.3);
+  padding: 3px 6px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);
+}
+.preset-btn {
+  background: transparent; border: none; color: var(--text-secondary);
+  font-size: 0.78rem; font-weight: 600; padding: 5px 10px; border-radius: 6px;
+  cursor: pointer; transition: all 0.2s; font-family: 'Outfit';
+  display: flex; align-items: center; gap: 4px;
+}
+.preset-btn:hover { color: #fff; background: rgba(255,255,255,0.06); }
+.preset-btn.active {
+  background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2));
+  border: 1px solid rgba(129,140,248,0.4); color: #c7d2fe; box-shadow: 0 0 12px rgba(99,102,241,0.25);
+}
+
 .wallet-btn {
   background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.35);
   color: var(--accent-hover); padding: 8px 18px; border-radius: 8px;

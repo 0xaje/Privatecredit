@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { BrowserProvider, Contract, type ContractTransactionResponse, type Signer } from 'ethers';
 import deploymentManifest from '../../config/privatecredit-cc3-live-v3.json';
 

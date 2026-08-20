@@ -60,8 +60,27 @@ export default function JudgeView({ borrowerAddress }: JudgeViewProps) {
         <div className="audit-table"><div className="audit-header"><span>Node</span><span>USC Evidence</span><span>Status</span></div>{judgeData.graph?.nodes?.filter((n: any) => n.type === 'EVIDENCE').map((n: any, i: number) => <div key={i} className="audit-row"><span className="audit-cell mono">{n.id.slice(0, 20)}...</span><span className="audit-cell mono">{n.uscEvidenceId?.slice(0, 16) || 'N/A'}...</span><span className="audit-cell"><span className={`status-dot ${n.proofStatus === 'VERIFIED' ? 'verified' : 'pending'}`} />{n.proofStatus || 'PENDING'}</span></div>)}</div>
         <div className="inspector-label" style={{ marginTop: '20px' }}>GRAPH EDGES</div>
         <div className="audit-table"><div className="audit-header"><span>Source</span><span>Target</span><span>Type</span></div>{judgeData.graph?.edges?.map((edge: any, i: number) => <div key={i} className="audit-row"><span className="audit-cell mono">{edge.source.slice(0, 18)}...</span><span className="audit-cell mono">{edge.target.slice(0, 18)}...</span><span className="audit-cell">{edge.type}</span></div>)}</div>
-        <button className="primary-action-btn" onClick={() => void handleCommitArtefact()} disabled={committing} style={{ marginTop: '20px' }}>{committing ? 'Awaiting signature...' : 'Commit Graph Artefact On-Chain'}</button>
-        {commitResult && <div className="result-msg">{commitResult}</div>}
+        
+        <button className="primary-action-btn" onClick={() => void handleCommitArtefact()} disabled={committing} style={{ marginTop: '20px' }}>
+          {committing ? 'Awaiting signature...' : 'Commit Graph Artefact On-Chain'}
+        </button>
+
+        <button
+          className="secondary-action-btn"
+          onClick={() => {
+            setCommitResult('🚨 SIMULATED DEFAULT TRIGGERED: Eligibility Revoked & Default Artefact Hashed to ArtefactRegistry.sol');
+          }}
+          style={{
+            marginTop: '10px',
+            borderColor: 'rgba(239, 68, 68, 0.4)',
+            color: '#fca5a5',
+            background: 'rgba(239, 68, 68, 0.08)'
+          }}
+        >
+          🚨 Simulate Default & Audit Breach
+        </button>
+
+        {commitResult && <div className={`result-msg ${commitResult.includes('DEFAULT') ? 'error' : ''}`}>{commitResult}</div>}
       </> : <p className="view-status">No audit data available. Connect a wallet with verified evidence to begin.</p>}
     </div>
   );

@@ -13,8 +13,9 @@ import { useCreditcoinWallet } from './wallet';
 
 function App() {
   const [activeView, setActiveView] = useState('overview');
-  const { address, isConnected, connect, disconnect, getSigner } = useCreditcoinWallet();
-  const wallet = address || null;
+  const { address, isConnected, connect, disconnect } = useCreditcoinWallet();
+  const [presetAddress, setPresetAddress] = useState<string>('0x71c7656ec7ab88b098defb751b7401b5f6d8976f');
+  const wallet = address || presetAddress;
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [judgeMode, setJudgeMode] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -103,8 +104,33 @@ function App() {
           <span className="logo-icon">◈</span> PRIVATECREDIT GRAPH
         </div>
         <div className="nav-links">
+          {/* Preset Profile Quick Switcher */}
+          <div className="preset-selector">
+            <span style={{ fontSize: '0.72rem', color: '#9ca3af', fontWeight: 600, paddingLeft: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Presets:
+            </span>
+            <button
+              className={`preset-btn ${wallet === '0x71c7656ec7ab88b098defb751b7401b5f6d8976f' ? 'active' : ''}`}
+              onClick={() => setPresetAddress('0x71c7656ec7ab88b098defb751b7401b5f6d8976f')}
+            >
+              👑 Whale (85)
+            </button>
+            <button
+              className={`preset-btn ${wallet === '0x1111111111111111111111111111111111111111' ? 'active' : ''}`}
+              onClick={() => setPresetAddress('0x1111111111111111111111111111111111111111')}
+            >
+              🔰 New (55)
+            </button>
+            <button
+              className={`preset-btn ${wallet === '0x9999999999999999999999999999999999999999' ? 'active' : ''}`}
+              onClick={() => setPresetAddress('0x9999999999999999999999999999999999999999')}
+            >
+              🚨 High Risk (35)
+            </button>
+          </div>
+
           <span className="nav-item">
-            <Zap size={14} /> Creditcoin Testnet
+            <Zap size={14} /> Creditcoin CC3
           </span>
           <span
             className={`nav-item ${judgeMode ? 'judge-active' : ''}`}
@@ -117,9 +143,9 @@ function App() {
           >
             ⚖ Judge: {judgeMode ? 'ON' : 'OFF'}
           </span>
-          {isConnected && wallet ? (
+          {isConnected && address ? (
             <button className="wallet-btn connected" onClick={() => void handleDisconnect()}>
-              <span className="wallet-dot" /> {wallet.slice(0, 6)}...{wallet.slice(-4)}
+              <span className="wallet-dot" /> {address.slice(0, 6)}...{address.slice(-4)}
             </button>
           ) : (
             <button className="wallet-btn" onClick={() => void handleConnect()}>
