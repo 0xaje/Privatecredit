@@ -3,9 +3,9 @@ import { defineChain } from '@reown/appkit/networks';
 import { EthersAdapter } from '@reown/appkit-adapter-ethers';
 import deployment from '../../config/deployments.json';
 
-const projectId = import.meta.env.VITE_REOWN_PROJECT_ID;
-if (!projectId) {
-  throw new Error('VITE_REOWN_PROJECT_ID is required to start the live frontend.');
+const projectId = import.meta.env.VITE_REOWN_PROJECT_ID || 'c4f79cc821944d9680842e34466bfbd';
+if (!import.meta.env.VITE_REOWN_PROJECT_ID) {
+  console.warn('VITE_REOWN_PROJECT_ID is not set in .env. Using fallback ID for development.');
 }
 
 export const creditcoinTestnet = defineChain({

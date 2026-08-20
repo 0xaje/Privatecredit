@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev": "npm --prefix frontend run dev",
     "compile": "hardhat compile",
     "test": "hardhat test",
     "test:contracts": "hardhat test test/Integration.ts",

@@ -169,11 +169,14 @@ contract LoanMarketplace is Ownable, ReentrancyGuard, Pausable, ILoanMarketplace
         if (offer.status != OfferStatus.PENDING) revert OfferNotPending(offerId);
         if (msg.value != offer.requiredCollateral) revert TermsOutOfBounds();
 
-        // Enforce LTV from the borrower's eligibility record
+        // Enforce LTV from the borrower's eligibility record (collateral ratio = 10000 - maxLtvBps)
         uint256 principal = offerDeposits[offerId];
         Eligibility memory elig = eligibilityRegistry.getEligibility(req.borrower);
         if (elig.maxLtvBps > 0) {
-            uint256 requiredCollateral = (principal * elig.maxLtvBps) / PolicyConstants.BPS_DENOMINATOR;
+            uint256 minCollateralRatioBps = PolicyConstants.BPS_DENOMINATOR > elig.maxLtvBps
+                ? PolicyConstants.BPS_DENOMINATOR - elig.maxLtvBps
+                : PolicyConstants.MIN_COLLATERAL_BPS;
+            uint256 requiredCollateral = (principal * minCollateralRatioBps) / PolicyConstants.BPS_DENOMINATOR;
             if (msg.value < requiredCollateral) revert InsufficientCollateral(requiredCollateral, msg.value);
         }
 

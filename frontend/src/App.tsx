@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
 import { Interface } from 'ethers';
 import { Activity, LayoutDashboard, Shield, User, Plus, Zap, X, AlertTriangle } from 'lucide-react';
 import type { Node } from 'reactflow';
@@ -10,13 +9,11 @@ import LoansView from './views/LoansView';
 import JudgeView from './views/JudgeView';
 import { api } from './api/client';
 import './App.css';
-import { appKit } from './appkit';
 import { useCreditcoinWallet } from './wallet';
 
 function App() {
   const [activeView, setActiveView] = useState('overview');
-  const { address, isConnected } = useAppKitAccount();
-  const { open } = useAppKit();
+  const { address, isConnected, connect, disconnect, getSigner } = useCreditcoinWallet();
   const wallet = address || null;
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [judgeMode, setJudgeMode] = useState(false);
@@ -36,14 +33,14 @@ function App() {
   const handleConnect = async () => {
     setWalletError(null);
     try {
-      await open();
+      await connect();
     } catch (error: any) {
       setWalletError(error.message || 'Wallet connection failed.');
     }
   };
 
   const handleDisconnect = async () => {
-    await appKit.disconnect('eip155');
+    await disconnect();
     setSelectedNode(null);
     setEvidenceNodeIds([]);
     setInsightScore(null);

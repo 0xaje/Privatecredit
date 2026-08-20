@@ -10,11 +10,12 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface LoanVaultInterface extends Interface {
-    getFunction(nameOrSignature: "calculateInterest" | "calculateTotalOwed" | "capacityManager" | "declareDefault" | "getLoan" | "loans" | "marketplace" | "nextLoanId" | "originateLoan" | "owner" | "paused" | "renounceOwnership" | "repayLoan" | "repaymentRegistry" | "setMarketplace" | "setRepaymentRegistry" | "transferOwnership"): FunctionFragment;
+    getFunction(nameOrSignature: "DEFAULT_GRACE_PERIOD" | "calculateInterest" | "calculateTotalOwed" | "capacityManager" | "declareDefault" | "getLoan" | "loans" | "marketplace" | "nextLoanId" | "originateLoan" | "owner" | "paused" | "renounceOwnership" | "repayLoan" | "repaymentRegistry" | "setMarketplace" | "setRepaymentRegistry" | "transferOwnership"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "CollateralSeized" | "LoanDefaulted" | "LoanOriginated" | "LoanRepaid" | "OwnershipTransferred" | "Paused" | "Unpaused"): EventFragment;
 
-    encodeFunctionData(functionFragment: 'calculateInterest', values: [BigNumberish]): string;
+    encodeFunctionData(functionFragment: 'DEFAULT_GRACE_PERIOD', values?: undefined): string;
+encodeFunctionData(functionFragment: 'calculateInterest', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'calculateTotalOwed', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'capacityManager', values?: undefined): string;
 encodeFunctionData(functionFragment: 'declareDefault', values: [BigNumberish]): string;
@@ -32,7 +33,8 @@ encodeFunctionData(functionFragment: 'setMarketplace', values: [AddressLike]): s
 encodeFunctionData(functionFragment: 'setRepaymentRegistry', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
 
-    decodeFunctionResult(functionFragment: 'calculateInterest', data: BytesLike): Result;
+    decodeFunctionResult(functionFragment: 'DEFAULT_GRACE_PERIOD', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'calculateInterest', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'calculateTotalOwed', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'capacityManager', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'declareDefault', data: BytesLike): Result;
@@ -169,6 +171,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 
 
     
+    
+    DEFAULT_GRACE_PERIOD: TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >
+    
+
     
     calculateInterest: TypedContractMethod<
       [loanId: BigNumberish, ],
@@ -308,7 +318,12 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
 
-    getFunction(nameOrSignature: 'calculateInterest'): TypedContractMethod<
+    getFunction(nameOrSignature: 'DEFAULT_GRACE_PERIOD'): TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'calculateInterest'): TypedContractMethod<
       [loanId: BigNumberish, ],
       [bigint],
       'view'

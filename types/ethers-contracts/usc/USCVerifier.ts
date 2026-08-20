@@ -13,7 +13,7 @@ export declare namespace INativeQueryVerifier {
     }
 
   export interface USCVerifierInterface extends Interface {
-    getFunction(nameOrSignature: "BPS_DENOMINATOR" | "POLICY_VERSION" | "TRANSFER_EVENT_SIGNATURE" | "borrowerEvidenceNonces" | "eligibilityRegistry" | "evidenceUsedForEligibility" | "owner" | "processedEvidence" | "processedQueries" | "registerEligibilityFromEvidence" | "renounceOwnership" | "setSourceChainKey" | "setSourceToken" | "sourceChainId" | "sourceChainKey" | "sourceToken" | "transferOwnership" | "verifiedEvidence" | "verifier" | "verifyEvidence"): FunctionFragment;
+    getFunction(nameOrSignature: "BPS_DENOMINATOR" | "POLICY_VERSION" | "TRANSFER_EVENT_SIGNATURE" | "borrowerEvidenceNonces" | "configureSourceChainKey" | "configureSourceToken" | "eligibilityRegistry" | "evidenceUsedForEligibility" | "owner" | "processedEvidence" | "processedQueries" | "registerEligibilityFromEvidence" | "renounceOwnership" | "setSourceChainKey" | "setSourceToken" | "sourceChainId" | "sourceChainKey" | "sourceToken" | "supportedSourceChainKeys" | "supportedSourceTokens" | "transferOwnership" | "verifiedEvidence" | "verifier" | "verifyEvidence"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "EligibilityRegisteredFromEvidence" | "EvidenceVerified" | "OwnershipTransferred" | "SourceTokenConfigured"): EventFragment;
 
@@ -21,6 +21,8 @@ export declare namespace INativeQueryVerifier {
 encodeFunctionData(functionFragment: 'POLICY_VERSION', values?: undefined): string;
 encodeFunctionData(functionFragment: 'TRANSFER_EVENT_SIGNATURE', values?: undefined): string;
 encodeFunctionData(functionFragment: 'borrowerEvidenceNonces', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'configureSourceChainKey', values: [BigNumberish, boolean]): string;
+encodeFunctionData(functionFragment: 'configureSourceToken', values: [BigNumberish, AddressLike, boolean]): string;
 encodeFunctionData(functionFragment: 'eligibilityRegistry', values?: undefined): string;
 encodeFunctionData(functionFragment: 'evidenceUsedForEligibility', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
@@ -33,6 +35,8 @@ encodeFunctionData(functionFragment: 'setSourceToken', values: [BigNumberish, Ad
 encodeFunctionData(functionFragment: 'sourceChainId', values?: undefined): string;
 encodeFunctionData(functionFragment: 'sourceChainKey', values?: undefined): string;
 encodeFunctionData(functionFragment: 'sourceToken', values?: undefined): string;
+encodeFunctionData(functionFragment: 'supportedSourceChainKeys', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'supportedSourceTokens', values: [BigNumberish, AddressLike]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'verifiedEvidence', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'verifier', values?: undefined): string;
@@ -42,6 +46,8 @@ encodeFunctionData(functionFragment: 'verifyEvidence', values: [BigNumberish, Ad
 decodeFunctionResult(functionFragment: 'POLICY_VERSION', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'TRANSFER_EVENT_SIGNATURE', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'borrowerEvidenceNonces', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'configureSourceChainKey', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'configureSourceToken', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'eligibilityRegistry', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'evidenceUsedForEligibility', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
@@ -54,6 +60,8 @@ decodeFunctionResult(functionFragment: 'setSourceToken', data: BytesLike): Resul
 decodeFunctionResult(functionFragment: 'sourceChainId', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'sourceChainKey', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'sourceToken', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'supportedSourceChainKeys', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'supportedSourceTokens', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'verifiedEvidence', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'verifier', data: BytesLike): Result;
@@ -175,6 +183,22 @@ decodeFunctionResult(functionFragment: 'verifyEvidence', data: BytesLike): Resul
     
 
     
+    configureSourceChainKey: TypedContractMethod<
+      [_sourceChainKey: BigNumberish, enabled: boolean, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    configureSourceToken: TypedContractMethod<
+      [_sourceChainId: BigNumberish, _sourceToken: AddressLike, enabled: boolean, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     eligibilityRegistry: TypedContractMethod<
       [],
       [string],
@@ -271,6 +295,22 @@ decodeFunctionResult(functionFragment: 'verifyEvidence', data: BytesLike): Resul
     
 
     
+    supportedSourceChainKeys: TypedContractMethod<
+      [arg0: BigNumberish, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
+    supportedSourceTokens: TypedContractMethod<
+      [arg0: BigNumberish, arg1: AddressLike, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
     transferOwnership: TypedContractMethod<
       [newOwner: AddressLike, ],
       [void],
@@ -324,6 +364,16 @@ getFunction(nameOrSignature: 'borrowerEvidenceNonces'): TypedContractMethod<
       [arg0: AddressLike, ],
       [bigint],
       'view'
+    >;
+getFunction(nameOrSignature: 'configureSourceChainKey'): TypedContractMethod<
+      [_sourceChainKey: BigNumberish, enabled: boolean, ],
+      [void],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'configureSourceToken'): TypedContractMethod<
+      [_sourceChainId: BigNumberish, _sourceToken: AddressLike, enabled: boolean, ],
+      [void],
+      'nonpayable'
     >;
 getFunction(nameOrSignature: 'eligibilityRegistry'): TypedContractMethod<
       [],
@@ -383,6 +433,16 @@ getFunction(nameOrSignature: 'sourceChainKey'): TypedContractMethod<
 getFunction(nameOrSignature: 'sourceToken'): TypedContractMethod<
       [],
       [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'supportedSourceChainKeys'): TypedContractMethod<
+      [arg0: BigNumberish, ],
+      [boolean],
+      'view'
+    >;
+getFunction(nameOrSignature: 'supportedSourceTokens'): TypedContractMethod<
+      [arg0: BigNumberish, arg1: AddressLike, ],
+      [boolean],
       'view'
     >;
 getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<

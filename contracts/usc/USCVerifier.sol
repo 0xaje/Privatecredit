@@ -46,6 +46,9 @@ contract USCVerifier is Ownable, ReentrancyGuard {
     uint256 public sourceChainId;
     uint64 public sourceChainKey;
 
+    mapping(uint256 => mapping(address => bool)) public supportedSourceTokens;
+    mapping(uint64 => bool) public supportedSourceChainKeys;
+
     error InvalidProof();
     error InvalidTransaction();
     error UnsupportedSourceChain(uint64 chainKey);
@@ -91,12 +94,33 @@ contract USCVerifier is Ownable, ReentrancyGuard {
         if (_sourceToken == address(0)) revert ZeroAddress();
         sourceChainId = _sourceChainId;
         sourceToken = _sourceToken;
+        supportedSourceTokens[_sourceChainId][_sourceToken] = true;
         emit SourceTokenConfigured(_sourceChainId, sourceChainKey, _sourceToken);
     }
 
     function setSourceChainKey(uint64 _sourceChainKey) external onlyOwner {
         if (_sourceChainKey == 0) revert UnsupportedSourceChain(_sourceChainKey);
         sourceChainKey = _sourceChainKey;
+        supportedSourceChainKeys[_sourceChainKey] = true;
+        emit SourceTokenConfigured(sourceChainId, _sourceChainKey, sourceToken);
+    }
+
+    function configureSourceToken(uint256 _sourceChainId, address _sourceToken, bool enabled) external onlyOwner {
+        if (_sourceToken == address(0)) revert ZeroAddress();
+        supportedSourceTokens[_sourceChainId][_sourceToken] = enabled;
+        if (enabled && sourceToken == address(0)) {
+            sourceToken = _sourceToken;
+            sourceChainId = _sourceChainId;
+        }
+        emit SourceTokenConfigured(_sourceChainId, sourceChainKey, _sourceToken);
+    }
+
+    function configureSourceChainKey(uint64 _sourceChainKey, bool enabled) external onlyOwner {
+        if (_sourceChainKey == 0) revert UnsupportedSourceChain(_sourceChainKey);
+        supportedSourceChainKeys[_sourceChainKey] = enabled;
+        if (enabled && sourceChainKey == 0) {
+            sourceChainKey = _sourceChainKey;
+        }
         emit SourceTokenConfigured(sourceChainId, _sourceChainKey, sourceToken);
     }
 
@@ -118,8 +142,7 @@ contract USCVerifier is Ownable, ReentrancyGuard {
         if (borrower == address(0)) revert ZeroAddress();
         if (evidenceType > 1) revert InvalidTransaction();
         if (sourceToken == address(0)) revert SourceTokenNotConfigured();
-        if (sourceChainId == 0 || sourceChainKey == 0) revert SourceChainMismatch(sourceChainId, chainKey);
-        if (chainKey != sourceChainKey) revert UnsupportedSourceChain(chainKey);
+        if (chainKey != sourceChainKey && !supportedSourceChainKeys[chainKey]) revert UnsupportedSourceChain(chainKey);
 
         INativeQueryVerifier.MerkleProof memory merkleProof = INativeQueryVerifier.MerkleProof({
             root: merkleRoot,
@@ -154,9 +177,11 @@ contract USCVerifier is Ownable, ReentrancyGuard {
         bool found;
         address sender;
         uint256 transferAmount;
+        address matchedToken;
         for (uint256 i = 0; i < transfers.length; i++) {
             EvmV1Decoder.LogEntry memory log = transfers[i];
-            if (log.address_ != sourceToken || log.topics.length != 3 || log.data.length != 32) continue;
+            bool isAcceptedToken = log.address_ == sourceToken || supportedSourceTokens[sourceChainId][log.address_];
+            if (!isAcceptedToken || log.topics.length != 3 || log.data.length != 32) continue;
 
             address from = address(uint160(uint256(log.topics[1])));
             address to = address(uint160(uint256(log.topics[2])));
@@ -168,12 +193,13 @@ contract USCVerifier is Ownable, ReentrancyGuard {
                 if (from != txFields.from) revert WrongSender(from, txFields.from);
             } else {
                 if (from != borrower) continue;
-                if (to != txFields.to && txFields.to != sourceToken) continue;
+                if (to != txFields.to && txFields.to != log.address_) continue;
             }
 
             found = true;
             sender = from;
             transferAmount = value;
+            matchedToken = log.address_;
             break;
         }
         if (!found) revert InvalidTransaction();

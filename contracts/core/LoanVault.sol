@@ -83,43 +83,51 @@ contract LoanVault is Ownable, ReentrancyGuard, Pausable, ILoanVault {
         emit LoanOriginated(loanId, borrower, lender, principal);
     }
 
+    uint256 public constant DEFAULT_GRACE_PERIOD = 2 days;
+
     function repayLoan(uint256 loanId) external payable nonReentrant whenNotPaused {
         Loan storage loan = loans[loanId];
         if (loan.borrower == address(0)) revert LoanNotFound(loanId);
         if (loan.borrower != msg.sender) revert NotBorrower(msg.sender, loanId);
         if (loan.status != LoanStatus.ACTIVE) revert LoanNotActive(loanId);
+        if (msg.value == 0) revert InsufficientRepayment(loanId, 0, 1);
 
         uint256 totalOwed = calculateTotalOwed(loanId);
-        if (msg.value < totalOwed) revert InsufficientRepayment(loanId, msg.value, totalOwed);
-        uint256 excess = msg.value - totalOwed;
 
-        loan.repaidAmount = totalOwed;
-        loan.status = LoanStatus.REPAID;
-        capacityManager.releaseCapacity(loan.borrower, loan.principal);
+        if (msg.value >= totalOwed) {
+            uint256 excess = msg.value - totalOwed;
+            loan.repaidAmount += totalOwed;
+            loan.status = LoanStatus.REPAID;
+            capacityManager.releaseCapacity(loan.borrower, loan.principal);
 
-        (bool collateralReturned, ) = loan.borrower.call{value: loan.collateralAmount}("");
-        if (!collateralReturned) revert TransferFailed();
-        (bool lenderPaid, ) = loan.lender.call{value: totalOwed}("");
-        if (!lenderPaid) revert TransferFailed();
-        if (excess > 0) {
-            (bool excessReturned, ) = loan.borrower.call{value: excess}("");
-            if (!excessReturned) revert TransferFailed();
+            (bool collateralReturned, ) = loan.borrower.call{value: loan.collateralAmount}("");
+            if (!collateralReturned) revert TransferFailed();
+            (bool lenderPaid, ) = loan.lender.call{value: totalOwed}("");
+            if (!lenderPaid) revert TransferFailed();
+            if (excess > 0) {
+                (bool excessReturned, ) = loan.borrower.call{value: excess}("");
+                if (!excessReturned) revert TransferFailed();
+            }
+
+            RepaymentOutcome outcome = block.timestamp <= loan.startTime + loan.duration
+                ? RepaymentOutcome.ON_TIME
+                : RepaymentOutcome.LATE;
+            if (address(repaymentRegistry) != address(0)) {
+                repaymentRegistry.recordRepayment(loanId, loan.borrower, totalOwed, outcome);
+            }
+            emit LoanRepaid(loanId, totalOwed);
+        } else {
+            loan.repaidAmount += msg.value;
+            (bool lenderPaid, ) = loan.lender.call{value: msg.value}("");
+            if (!lenderPaid) revert TransferFailed();
         }
-
-        RepaymentOutcome outcome = block.timestamp <= loan.startTime + loan.duration
-            ? RepaymentOutcome.ON_TIME
-            : RepaymentOutcome.LATE;
-        if (address(repaymentRegistry) != address(0)) {
-            repaymentRegistry.recordRepayment(loanId, loan.borrower, totalOwed, outcome);
-        }
-        emit LoanRepaid(loanId, totalOwed);
     }
 
     function declareDefault(uint256 loanId) external nonReentrant whenNotPaused {
         Loan storage loan = loans[loanId];
         if (loan.borrower == address(0)) revert LoanNotFound(loanId);
         if (loan.status != LoanStatus.ACTIVE) revert LoanNotActive(loanId);
-        if (block.timestamp <= loan.startTime + loan.duration) revert LoanNotExpired(loanId);
+        if (block.timestamp <= loan.startTime + loan.duration + DEFAULT_GRACE_PERIOD) revert LoanNotExpired(loanId);
 
         loan.status = LoanStatus.DEFAULTED;
         capacityManager.lockDefaultedCapacity(loan.borrower, loan.principal);
