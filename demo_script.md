@@ -8,7 +8,7 @@
 ## 2. Wallet & Evidence (1.5 mins)
 * **Action:** Click 'Connect Wallet' in the top right. Accept MetaMask prompt.
 * **Speaking:** "When a borrower logs in, their credit identity is represented as a Wallet Node. To build reputation, they need to prove off-chain or cross-chain behavior."
-* **Action:** Click 'Add Evidence'. Enter a dummy hash or real testnet hash for Ethereum (Chain 1) -> INFLOW. Click 'Submit for Verification'.
+* **Action:** Click 'Add Evidence'. Enter a real testnet transaction hash for Ethereum (Chain 11155111) -> INFLOW. Click 'Submit for Verification'.
 * **Speaking:** "Here, we submit an Ethereum transaction. The backend calls the **Attestcoin Prover** (USC SDK). Once verified, an Evidence Node appears on the graph, anchored to the wallet."
 
 ## 3. Policy & Risk (1.5 mins)

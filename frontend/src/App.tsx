@@ -113,19 +113,19 @@ function App() {
               className={`preset-btn ${wallet === '0x71c7656ec7ab88b098defb751b7401b5f6d8976f' ? 'active' : ''}`}
               onClick={() => setPresetAddress('0x71c7656ec7ab88b098defb751b7401b5f6d8976f')}
             >
-              Veteran (85)
+              Veteran Account
             </button>
             <button
               className={`preset-btn ${wallet === '0x1111111111111111111111111111111111111111' ? 'active' : ''}`}
               onClick={() => setPresetAddress('0x1111111111111111111111111111111111111111')}
             >
-              Standard (55)
+              Standard Account
             </button>
             <button
               className={`preset-btn ${wallet === '0x9999999999999999999999999999999999999999' ? 'active' : ''}`}
               onClick={() => setPresetAddress('0x9999999999999999999999999999999999999999')}
             >
-              High Risk (35)
+              High Risk Account
             </button>
           </div>
 
