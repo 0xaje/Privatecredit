@@ -10,8 +10,8 @@ import * as Contracts from "./index.js";
 
 declare module "@nomicfoundation/hardhat-ethers/types" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
-  getContractFactory(name: 'CapacityManager', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CapacityManager__factory>
-getContractFactory(name: 'ArtefactRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ArtefactRegistry__factory>
+  getContractFactory(name: 'ArtefactRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ArtefactRegistry__factory>
+getContractFactory(name: 'CapacityManager', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CapacityManager__factory>
 getContractFactory(name: 'DebtAuctionManager', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.DebtAuctionManager__factory>
 getContractFactory(name: 'EligibilityRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.EligibilityRegistry__factory>
 getContractFactory(name: 'LoanMarketplace', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.LoanMarketplace__factory>
@@ -29,8 +29,8 @@ getContractFactory(name: 'EvmV1Decoder', signerOrOptions?: ethers.Signer | Facto
 getContractFactory(name: 'USCVerifier', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.USCVerifier__factory>
 getContractFactory(name: 'INativeQueryVerifier', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.INativeQueryVerifier__factory>
 
-  getContractAt(name: 'CapacityManager', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CapacityManager>
-getContractAt(name: 'ArtefactRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ArtefactRegistry>
+  getContractAt(name: 'ArtefactRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ArtefactRegistry>
+getContractAt(name: 'CapacityManager', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CapacityManager>
 getContractAt(name: 'DebtAuctionManager', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.DebtAuctionManager>
 getContractAt(name: 'EligibilityRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.EligibilityRegistry>
 getContractAt(name: 'LoanMarketplace', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.LoanMarketplace>
@@ -48,8 +48,8 @@ getContractAt(name: 'EvmV1Decoder', address: string | ethers.Addressable, signer
 getContractAt(name: 'USCVerifier', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.USCVerifier>
 getContractAt(name: 'INativeQueryVerifier', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.INativeQueryVerifier>
 
-  deployContract(name: 'CapacityManager', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CapacityManager>
-deployContract(name: 'ArtefactRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ArtefactRegistry>
+  deployContract(name: 'ArtefactRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ArtefactRegistry>
+deployContract(name: 'CapacityManager', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CapacityManager>
 deployContract(name: 'DebtAuctionManager', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.DebtAuctionManager>
 deployContract(name: 'EligibilityRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.EligibilityRegistry>
 deployContract(name: 'LoanMarketplace', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.LoanMarketplace>
@@ -67,8 +67,8 @@ deployContract(name: 'EvmV1Decoder', signerOrOptions?: ethers.Signer | DeployCon
 deployContract(name: 'USCVerifier', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.USCVerifier>
 deployContract(name: 'INativeQueryVerifier', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.INativeQueryVerifier>
 
-  deployContract(name: 'CapacityManager', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CapacityManager>
-deployContract(name: 'ArtefactRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ArtefactRegistry>
+  deployContract(name: 'ArtefactRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ArtefactRegistry>
+deployContract(name: 'CapacityManager', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CapacityManager>
 deployContract(name: 'DebtAuctionManager', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.DebtAuctionManager>
 deployContract(name: 'EligibilityRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.EligibilityRegistry>
 deployContract(name: 'LoanMarketplace', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.LoanMarketplace>

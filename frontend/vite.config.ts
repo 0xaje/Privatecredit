@@ -13,13 +13,22 @@ export default defineConfig({
     }
   },
   build: {
-    chunkSizeWarningLimit: 600,
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks(id: string) {
           if (id.includes('node_modules')) {
-            if (id.includes('@reown')) {
-              return 'vendor-wallet';
+            if (id.includes('@rainbow-me/rainbowkit')) {
+              return 'vendor-rainbowkit';
+            }
+            if (id.includes('wagmi')) {
+              return 'vendor-wagmi';
+            }
+            if (id.includes('viem')) {
+              return 'vendor-viem';
+            }
+            if (id.includes('@tanstack/react-query')) {
+              return 'vendor-query';
             }
             if (id.includes('ethers')) {
               return 'vendor-ethers';

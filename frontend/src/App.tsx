@@ -10,10 +10,11 @@ import JudgeView from './views/JudgeView';
 import { api } from './api/client';
 import './App.css';
 import { useCreditcoinWallet } from './wallet';
+import { CustomConnectButton } from './components/CustomConnectButton';
 
 function App() {
   const [activeView, setActiveView] = useState('overview');
-  const { address, isConnected, connect, disconnect } = useCreditcoinWallet();
+  const { address } = useCreditcoinWallet();
   const [presetAddress, setPresetAddress] = useState<string>('0x71c7656ec7ab88b098defb751b7401b5f6d8976f');
   const wallet = address || presetAddress;
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -30,25 +31,6 @@ function App() {
   const refreshGraph = useCallback(() => {
     setRefreshTrigger(t => t + 1);
   }, []);
-
-  const handleConnect = async () => {
-    setWalletError(null);
-    try {
-      await connect();
-    } catch (error: any) {
-      setWalletError(error.message || 'Wallet connection failed.');
-    }
-  };
-
-  const handleDisconnect = async () => {
-    await disconnect();
-    setSelectedNode(null);
-    setEvidenceNodeIds([]);
-    setInsightScore(null);
-    setCapacity(null);
-    setJudgeMode(false);
-    setActiveView('overview');
-  };
 
   // ─── Fetch live stats ───
   useEffect(() => {
@@ -143,15 +125,7 @@ function App() {
           >
             <Shield size={14} style={{ marginRight: '4px' }} /> Auditor Mode: {judgeMode ? 'ON' : 'OFF'}
           </span>
-          {isConnected && address ? (
-            <button className="wallet-btn connected" onClick={() => void handleDisconnect()}>
-              <span className="wallet-dot" /> {address.slice(0, 6)}...{address.slice(-4)}
-            </button>
-          ) : (
-            <button className="wallet-btn" onClick={() => void handleConnect()}>
-              Connect Wallet
-            </button>
-          )}
+          <CustomConnectButton />
         </div>
       </header>
 

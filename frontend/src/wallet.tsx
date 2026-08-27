@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, useCallback, type ReactNode } from 'react';
+import { useAccount, useChainId, useDisconnect, useWalletClient } from 'wagmi';
 import { BrowserProvider, Contract, type ContractTransactionResponse, type Signer } from 'ethers';
 import deploymentManifest from '../../config/privatecredit-cc3-live-v3.json';
 
@@ -9,9 +10,6 @@ export const deployment = {
     uscVerifier: import.meta.env.VITE_USC_VERIFIER_ADDRESS || deploymentManifest.contracts.uscVerifier,
   },
 };
-
-const CC3_CHAIN_ID_DEC = deployment.chainId || 102031;
-const CC3_CHAIN_ID_HEX = `0x${CC3_CHAIN_ID_DEC.toString(16)}`;
 
 interface WalletContextType {
   address: string;
@@ -28,134 +26,25 @@ interface WalletContextType {
 const WalletContext = createContext<WalletContextType | null>(null);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [address, setAddress] = useState<string>('');
-  const [chainId, setChainId] = useState<number | null>(null);
-  const [isConnecting, setIsConnecting] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const { address, isConnected, isConnecting } = useAccount();
+  const chainId = useChainId();
+  const { disconnectAsync } = useDisconnect();
+  const { data: walletClient } = useWalletClient();
 
-  const checkNetwork = async (eth: any): Promise<boolean> => {
-    try {
-      const currentChainHex = await eth.request({ method: 'eth_chainId' });
-      const currentChainId = parseInt(currentChainHex, 16);
-      setChainId(currentChainId);
-
-      if (currentChainId !== CC3_CHAIN_ID_DEC) {
-        try {
-          await eth.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: CC3_CHAIN_ID_HEX }],
-          });
-          return true;
-        } catch (switchError: any) {
-          if (switchError.code === 4902 || switchError.data?.originalError?.code === 4902 || switchError.code === -32603) {
-            await eth.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: CC3_CHAIN_ID_HEX,
-                chainName: 'Creditcoin CC3 Testnet',
-                nativeCurrency: { name: 'Creditcoin', symbol: 'tCTC', decimals: 18 },
-                rpcUrls: [deployment.rpcUrl || 'https://rpc.cc3-testnet.creditcoin.network'],
-                blockExplorerUrls: ['https://creditcoin.blockscout.com'],
-              }],
-            });
-            return true;
-          }
-          throw switchError;
-        }
-      }
-      return true;
-    } catch (err: any) {
-      console.warn('Network switch issue:', err);
-      return false;
-    }
-  };
-
-  const syncAccounts = useCallback(async () => {
-    if (typeof window === 'undefined' || !(window as any).ethereum) return;
-    const eth = (window as any).ethereum;
-    try {
-      const accounts: string[] = await eth.request({ method: 'eth_accounts' });
-      if (accounts && accounts.length > 0) {
-        setAddress(accounts[0]);
-        const currentChainHex = await eth.request({ method: 'eth_chainId' });
-        setChainId(parseInt(currentChainHex, 16));
-      } else {
-        setAddress('');
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  useEffect(() => {
-    syncAccounts();
-
+  const getSigner = useCallback(async (): Promise<Signer> => {
     if (typeof window !== 'undefined' && (window as any).ethereum) {
-      const eth = (window as any).ethereum;
-      const handleAccountsChanged = (accounts: string[]) => {
-        if (accounts && accounts.length > 0) {
-          setAddress(accounts[0]);
-        } else {
-          setAddress('');
-        }
-      };
-      const handleChainChanged = (chainHex: string) => {
-        setChainId(parseInt(chainHex, 16));
-      };
-
-      eth.on?.('accountsChanged', handleAccountsChanged);
-      eth.on?.('chainChanged', handleChainChanged);
-
-      return () => {
-        eth.removeListener?.('accountsChanged', handleAccountsChanged);
-        eth.removeListener?.('chainChanged', handleChainChanged);
-      };
+      const provider = new BrowserProvider((window as any).ethereum);
+      return provider.getSigner();
     }
-  }, [syncAccounts]);
-
-  const connect = async () => {
-    setError(null);
-    setIsConnecting(true);
-    try {
-      if (typeof window === 'undefined' || !(window as any).ethereum) {
-        throw new Error('No browser wallet detected. Please install MetaMask, Rabby, or Coinbase Wallet.');
-      }
-
-      const eth = (window as any).ethereum;
-      const accounts: string[] = await eth.request({ method: 'eth_requestAccounts' });
-      if (!accounts || accounts.length === 0) {
-        throw new Error('No accounts selected');
-      }
-
-      setAddress(accounts[0]);
-      await checkNetwork(eth);
-    } catch (err: any) {
-      console.error('Wallet connection error:', err);
-      const msg = err?.message || 'Wallet connection failed';
-      setError(msg);
-      throw err;
-    } finally {
-      setIsConnecting(false);
-    }
-  };
-
-  const disconnect = async () => {
-    setAddress('');
-    setChainId(null);
-    setError(null);
-  };
-
-  const getSigner = async (): Promise<Signer> => {
-    if (!address || typeof window === 'undefined' || !(window as any).ethereum) {
+    if (!walletClient) {
       throw new Error('Connect your wallet before signing.');
     }
-    const eth = (window as any).ethereum;
-    await checkNetwork(eth);
-    const provider = new BrowserProvider(eth);
+    const transport = (walletClient as any).transport;
+    const provider = new BrowserProvider(transport);
     return provider.getSigner();
-  };
+  }, [walletClient]);
 
-  const send = async (
+  const send = useCallback(async (
     contractAddress: string,
     abi: any[],
     method: string,
@@ -166,24 +55,34 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const signer = await getSigner();
     const contract = new Contract(contractAddress, abi, signer);
     return contract[method](...args, value ? { value } : {});
-  };
+  }, [getSigner]);
 
-  const isConnected = !!address;
+  const connect = useCallback(async () => {
+    // Handled by RainbowKit modal
+  }, []);
+
+  const disconnect = useCallback(async () => {
+    try {
+      await disconnectAsync();
+    } catch {
+      // ignore
+    }
+  }, [disconnectAsync]);
+
+  const contextValue = useMemo<WalletContextType>(() => ({
+    address: address || '',
+    isConnected: !!address && isConnected,
+    isConnecting,
+    chainId: chainId || null,
+    error: null,
+    connect,
+    disconnect,
+    getSigner,
+    send,
+  }), [address, isConnected, isConnecting, chainId, connect, disconnect, getSigner, send]);
 
   return (
-    <WalletContext.Provider
-      value={{
-        address,
-        isConnected,
-        isConnecting,
-        chainId,
-        error,
-        connect,
-        disconnect,
-        getSigner,
-        send,
-      }}
-    >
+    <WalletContext.Provider value={contextValue}>
       {children}
     </WalletContext.Provider>
   );
