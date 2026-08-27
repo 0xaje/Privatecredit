@@ -1,5 +1,5 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Wallet, AlertTriangle } from 'lucide-react';
+import { Wallet, AlertTriangle, ChevronDown, CheckCircle2 } from 'lucide-react';
 
 export function CustomConnectButton() {
   return (
@@ -33,81 +33,74 @@ export function CustomConnectButton() {
               })}
             >
               {(() => {
-                // 1. Not connected state
+                // 1. Disconnected State
                 if (!connected) {
                   return (
                     <button
                       onClick={openConnectModal}
                       type="button"
-                      className="px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-all text-xs font-mono shadow-md active:scale-95 cursor-pointer bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white border border-cyan-400/30"
-                      style={{
-                        background: 'linear-gradient(135deg, #0284c7, #2563eb)',
-                        color: '#ffffff',
-                        border: '1px solid rgba(56, 189, 248, 0.4)',
-                        boxShadow: '0 0 15px rgba(2, 132, 199, 0.3)',
-                      }}
+                      className="connect-wallet-glow-btn"
                     >
-                      <Wallet className="w-4 h-4" />
-                      <span>CONNECT WALLET</span>
+                      <div className="btn-inner">
+                        <Wallet className="w-4 h-4 text-cyan-400" />
+                        <span>Connect Wallet</span>
+                      </div>
                     </button>
                   );
                 }
 
-                // 2. Unsupported / Wrong Network state
+                // 2. Wrong Network State
                 if (chain.unsupported) {
                   return (
                     <button
                       onClick={openChainModal}
                       type="button"
-                      className="px-3 py-1.5 bg-red-600/90 text-white font-bold text-xs font-mono rounded-lg transition-all cursor-pointer hover:bg-red-700 flex items-center gap-1.5 border border-red-400/40 animate-pulse shadow-lg"
+                      className="network-warning-btn"
                     >
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>Switch to CC3</span>
+                      <AlertTriangle className="w-4 h-4 text-amber-300 animate-bounce" />
+                      <span>Switch to CC3 Testnet</span>
                     </button>
                   );
                 }
 
-                // 3. Connected state
+                // 3. Connected Institutional Pill
                 return (
-                  <div className="flex items-center gap-2">
+                  <div className="connected-wallet-cluster">
+                    {/* Chain Pill */}
                     <button
                       onClick={openChainModal}
                       type="button"
-                      className="px-2.5 py-1.5 bg-slate-800/80 border border-slate-700/70 text-slate-300 font-semibold text-xs font-mono rounded-lg transition-all flex items-center gap-1.5 cursor-pointer hover:bg-slate-700/80"
+                      className="chain-select-pill"
                     >
-                      {chain.hasIcon && (
-                        <div
-                          style={{
-                            background: chain.iconBackground,
-                            width: 12,
-                            height: 12,
-                            borderRadius: 999,
-                            overflow: 'hidden',
-                            marginRight: 4,
-                          }}
-                        >
-                          {chain.iconUrl && (
-                            <img
-                              alt={chain.name ?? 'Chain icon'}
-                              src={chain.iconUrl}
-                              style={{ width: 12, height: 12 }}
-                            />
-                          )}
-                        </div>
-                      )}
-                      <span>{chain.name}</span>
+                      <div className="chain-indicator">
+                        <span className="chain-dot-active" />
+                      </div>
+                      <span className="chain-name-text">
+                        {chain.name || 'Creditcoin CC3'}
+                      </span>
+                      <ChevronDown className="w-3 h-3 text-slate-400" />
                     </button>
 
+                    {/* Account & Balance Pill */}
                     <button
                       onClick={openAccountModal}
                       type="button"
-                      className="px-3 py-1.5 bg-slate-900/90 border border-cyan-500/40 text-slate-100 font-bold text-xs font-mono rounded-lg transition-all flex items-center gap-2 cursor-pointer hover:bg-slate-800 shadow-md"
+                      className="account-select-pill"
                     >
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                      <span>{account.displayName}</span>
-                      {account.displayBalance ? (
-                        <span className="text-slate-400 font-normal">({account.displayBalance})</span>
-                      ) : null}
+                      {account.displayBalance && (
+                        <span className="account-balance-text">
+                          {account.displayBalance}
+                        </span>
+                      )}
+                      <div className="account-avatar-ring">
+                        <div className="account-identicon">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        </div>
+                        <span className="account-address-text">
+                          {account.displayName}
+                        </span>
+                      </div>
+                      <ChevronDown className="w-3 h-3 text-slate-400" />
                     </button>
                   </div>
                 );

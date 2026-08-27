@@ -4,9 +4,9 @@
 
 :root {
   --bg-dark: #07090e;
-  --bg-panel: rgba(13, 17, 28, 0.82);
+  --bg-panel: rgba(13, 17, 28, 0.85);
   --bg-panel-hover: rgba(22, 29, 47, 0.9);
-  --bg-card: rgba(18, 24, 39, 0.7);
+  --bg-card: rgba(18, 24, 39, 0.75);
   --bg-card-subtle: rgba(255, 255, 255, 0.03);
   
   --panel-border: rgba(255, 255, 255, 0.08);
@@ -44,7 +44,7 @@ body {
 /* ═══════════════ MAIN LAYOUT ═══════════════ */
 .app-container {
   display: grid;
-  grid-template-rows: 64px 1fr 44px;
+  grid-template-rows: 64px 1fr 40px;
   grid-template-columns: 280px 1fr 380px;
   grid-template-areas:
     "nav nav nav"
@@ -132,6 +132,147 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+/* ═══════════════ RAINBOWKIT CUSTOM PILL ═══════════════ */
+.connect-wallet-glow-btn {
+  padding: 1px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(14, 165, 233, 0.35);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.connect-wallet-glow-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 28px rgba(14, 165, 233, 0.55);
+}
+
+.connect-wallet-glow-btn:active {
+  transform: scale(0.98);
+}
+
+.btn-inner {
+  padding: 8px 18px;
+  border-radius: 11px;
+  background: #090e1a;
+  color: #fff;
+  font-family: var(--font-main);
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.2px;
+}
+
+.network-warning-btn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.3);
+}
+
+.connected-wallet-cluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chain-select-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  font-family: var(--font-main);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chain-select-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(14, 165, 233, 0.4);
+}
+
+.chain-indicator {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chain-dot-active {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.account-select-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px 4px 6px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  color: #fff;
+  font-family: var(--font-main);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.account-select-pill:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 16px rgba(14, 165, 233, 0.3);
+}
+
+.account-balance-text {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #38bdf8;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(14, 165, 233, 0.12);
+}
+
+.account-avatar-ring {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.account-identicon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.account-address-text {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #f1f5f9;
 }
 
 /* ═══════════════ LEFT SIDEBAR ═══════════════ */
@@ -346,6 +487,129 @@ body {
   border-color: rgba(14, 165, 233, 0.4);
   color: #38bdf8;
   transform: translateY(-1px);
+}
+
+/* ═══════════════ CUSTOM GRAPH NODE CARDS ═══════════════ */
+.node-glass-card {
+  min-width: 220px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.node-glass-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+
+.node-selected {
+  border-color: var(--accent-cyan) !important;
+  box-shadow: 0 0 24px rgba(14, 165, 233, 0.4) !important;
+  transform: scale(1.02);
+}
+
+.node-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 10px;
+}
+
+.node-icon-wrapper {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.wallet-accent { background: rgba(14, 165, 233, 0.15); border: 1px solid rgba(14, 165, 233, 0.3); }
+.evidence-accent { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); }
+.eligibility-accent { background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); }
+.loan-accent { background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.3); }
+.pending-accent { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+.node-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-grow: 1;
+}
+
+.node-type-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.node-title-code {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.node-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+
+.node-status-badge.verified {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.node-status-badge.pending {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+.node-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.node-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.node-stat-label {
+  color: var(--text-muted);
+}
+
+.node-stat-val {
+  color: #f1f5f9;
+  font-weight: 600;
+}
+
+.custom-node-handle {
+  width: 8px !important;
+  height: 8px !important;
+  background: #38bdf8 !important;
+  border: 2px solid #07090e !important;
 }
 
 /* ═══════════════ RIGHT WORKSPACE CONSOLE ═══════════════ */
