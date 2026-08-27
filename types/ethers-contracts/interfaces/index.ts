@@ -3,6 +3,7 @@
 /* eslint-disable */
 export type { IArtefactRegistry } from './IArtefactRegistry.js';
 export type { ICapacityManager } from './ICapacityManager.js';
+export type { IDebtAuctionManager } from './IDebtAuctionManager.js';
 export type { IEligibilityRegistry } from './IEligibilityRegistry.js';
 export type { ILoanMarketplace } from './ILoanMarketplace.js';
 export type { ILoanVault } from './ILoanVault.js';

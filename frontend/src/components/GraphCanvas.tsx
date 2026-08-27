@@ -14,6 +14,7 @@ import WalletNode from './nodes/WalletNode';
 import EvidenceNode from './nodes/EvidenceNode';
 import EligibilityNode from './nodes/EligibilityNode';
 import LoanNode from './nodes/LoanNode';
+import { AuctionNode } from './nodes/AuctionNode';
 import { api } from '../api/client';
 
 // Backend node type → ReactFlow custom node type
@@ -24,6 +25,7 @@ const TYPE_MAP: Record<string, string> = {
   BORROW_REQUEST: 'loan',
   LOAN: 'loan',
   REPAYMENT: 'evidence',
+  AUCTION: 'auction',
 };
 
 // Radial layout: wallet at center, others in rings
@@ -75,6 +77,7 @@ const EDGE_COLORS: Record<string, string> = {
   FUNDED_BY: '#ec4899',
   COLLATERAL_FOR: '#f59e0b',
   CONSUMES_CAPACITY: '#ef4444',
+  AUCTIONED_FROM: '#f59e0b',
 };
 
 function mapEdges(backendEdges: any[]): Edge[] {
@@ -105,6 +108,7 @@ export default function GraphCanvas({ borrowerAddress, onNodeSelect, refreshTrig
     evidence: EvidenceNode,
     eligibility: EligibilityNode,
     loan: LoanNode,
+    auction: AuctionNode,
   }), []);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);

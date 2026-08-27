@@ -3,6 +3,7 @@
 /* eslint-disable */
 export { IArtefactRegistry__factory } from './IArtefactRegistry__factory.js';
 export { ICapacityManager__factory } from './ICapacityManager__factory.js';
+export { IDebtAuctionManager__factory } from './IDebtAuctionManager__factory.js';
 export { IEligibilityRegistry__factory } from './IEligibilityRegistry__factory.js';
 export { ILoanMarketplace__factory } from './ILoanMarketplace__factory.js';
 export { ILoanVault__factory } from './ILoanVault__factory.js';

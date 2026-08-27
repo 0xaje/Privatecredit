@@ -3,6 +3,7 @@
 /* eslint-disable */
 export type { ArtefactRegistry } from './ArtefactRegistry.js';
 export type { CapacityManager } from './CapacityManager.js';
+export type { DebtAuctionManager } from './DebtAuctionManager.js';
 export type { EligibilityRegistry } from './EligibilityRegistry.js';
 export type { LoanMarketplace } from './LoanMarketplace.js';
 export type { LoanVault } from './LoanVault.js';

@@ -42,4 +42,29 @@ export const api = {
   getJudgeView: (borrower: string) => fetchJSON(`/judge/${borrower}`),
   prepareArtefactCommit: (from: string, snapshotCommitment: string, eligibilityNonce: number, policyReference: string, contentReference: string) =>
     fetchJSON('/artefacts/prepare/commit', { method: 'POST', body: JSON.stringify({ from, snapshotCommitment, eligibilityNonce, policyReference, contentReference }) }),
+  
+  // Debt Auctions & Liquidation
+  getAuctions: () => fetchJSON('/auctions'),
+  createAuction: (loanId: string, borrower: string, principal: string, collateralAmount: string, reservePrice?: string, discountBps?: number) =>
+    fetchJSON('/auctions', { method: 'POST', body: JSON.stringify({ loanId, borrower, principal, collateralAmount, reservePrice, discountBps }) }),
+  bidAuction: (auctionId: string, bidder: string, amount: string) =>
+    fetchJSON(`/auctions/${auctionId}/bid`, { method: 'POST', body: JSON.stringify({ bidder, amount }) }),
+
+  // Real-time Event Stream
+  subscribeToEvents: (onMessage: (event: any) => void) => {
+    try {
+      const eventSource = new EventSource(`${API_BASE}/events`);
+      eventSource.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          onMessage(data);
+        } catch {
+          // ignore malformed JSON
+        }
+      };
+      return () => eventSource.close();
+    } catch {
+      return () => {};
+    }
+  },
 };

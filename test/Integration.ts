@@ -72,4 +72,49 @@ describe("PrivateCredit Graph Integration", function () {
     expect(await eligibilityRegistry.registrar()).to.equal(await uscVerifier.getAddress());
     expect(await deployer.getAddress()).to.equal(deployer.address);
   });
+
+  it("handles defaulted debt liquidation and secondary auction recovery", async function () {
+    const [deployer, borrower, lender, liquidator] = await ethers.getSigners();
+    const capacityManager = await ethers.deployContract("CapacityManager", [deployer.address]);
+    const loanVault = await ethers.deployContract("LoanVault", [await capacityManager.getAddress()]);
+    const debtAuction = await ethers.deployContract("DebtAuctionManager", [await loanVault.getAddress()]);
+    await loanVault.setDebtAuctionManager(await debtAuction.getAddress());
+
+    const principal = ethers.parseEther("1000");
+    const collateral = ethers.parseEther("200");
+    const reservePrice = ethers.parseEther("800");
+    const duration = 3600n; // 1 hour
+
+    // Create debt auction
+    const tx = await debtAuction.createAuction(
+      1n,
+      borrower.address,
+      lender.address,
+      principal,
+      collateral,
+      reservePrice,
+      duration
+    );
+    await tx.wait();
+
+    const auction = await debtAuction.getAuction(1n);
+    expect(auction.status).to.equal(1); // ACTIVE
+    expect(auction.principal).to.equal(principal);
+
+    // Liquidator places winning bid
+    const bidAmount = ethers.parseEther("850");
+    await debtAuction.connect(liquidator).placeBid(1n, { value: bidAmount });
+    const updatedAuction = await debtAuction.getAuction(1n);
+    expect(updatedAuction.highestBidder).to.equal(liquidator.address);
+    expect(updatedAuction.highestBid).to.equal(bidAmount);
+
+    // Settle auction after expiration
+    await networkHelpers.time.increase(3601);
+    const initialLenderBalance = await ethers.provider.getBalance(lender.address);
+    await debtAuction.settleAuction(1n);
+
+    const finalLenderBalance = await ethers.provider.getBalance(lender.address);
+    expect(finalLenderBalance - initialLenderBalance).to.equal(bidAmount);
+    expect((await debtAuction.getAuction(1n)).status).to.equal(2); // SETTLED
+  });
 });

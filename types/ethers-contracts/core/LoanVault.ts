@@ -10,7 +10,7 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface LoanVaultInterface extends Interface {
-    getFunction(nameOrSignature: "DEFAULT_GRACE_PERIOD" | "calculateInterest" | "calculateTotalOwed" | "capacityManager" | "declareDefault" | "getLoan" | "loans" | "marketplace" | "nextLoanId" | "originateLoan" | "owner" | "paused" | "renounceOwnership" | "repayLoan" | "repaymentRegistry" | "setMarketplace" | "setRepaymentRegistry" | "transferOwnership"): FunctionFragment;
+    getFunction(nameOrSignature: "DEFAULT_GRACE_PERIOD" | "calculateInterest" | "calculateTotalOwed" | "capacityManager" | "debtAuctionManager" | "declareDefault" | "getLoan" | "loans" | "marketplace" | "nextLoanId" | "originateLoan" | "owner" | "paused" | "renounceOwnership" | "repayLoan" | "repaymentRegistry" | "setDebtAuctionManager" | "setMarketplace" | "setRepaymentRegistry" | "transferOwnership"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "CollateralSeized" | "LoanDefaulted" | "LoanOriginated" | "LoanRepaid" | "OwnershipTransferred" | "Paused" | "Unpaused"): EventFragment;
 
@@ -18,6 +18,7 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
 encodeFunctionData(functionFragment: 'calculateInterest', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'calculateTotalOwed', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'capacityManager', values?: undefined): string;
+encodeFunctionData(functionFragment: 'debtAuctionManager', values?: undefined): string;
 encodeFunctionData(functionFragment: 'declareDefault', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getLoan', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'loans', values: [BigNumberish]): string;
@@ -29,6 +30,7 @@ encodeFunctionData(functionFragment: 'paused', values?: undefined): string;
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
 encodeFunctionData(functionFragment: 'repayLoan', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'repaymentRegistry', values?: undefined): string;
+encodeFunctionData(functionFragment: 'setDebtAuctionManager', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'setMarketplace', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'setRepaymentRegistry', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
@@ -37,6 +39,7 @@ encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike])
 decodeFunctionResult(functionFragment: 'calculateInterest', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'calculateTotalOwed', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'capacityManager', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'debtAuctionManager', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'declareDefault', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getLoan', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'loans', data: BytesLike): Result;
@@ -48,6 +51,7 @@ decodeFunctionResult(functionFragment: 'paused', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'repayLoan', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'repaymentRegistry', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setDebtAuctionManager', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setMarketplace', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setRepaymentRegistry', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
@@ -204,6 +208,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
 
     
+    debtAuctionManager: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
     declareDefault: TypedContractMethod<
       [loanId: BigNumberish, ],
       [void],
@@ -292,6 +304,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
 
     
+    setDebtAuctionManager: TypedContractMethod<
+      [_debtAuctionManager: AddressLike, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     setMarketplace: TypedContractMethod<
       [_marketplace: AddressLike, ],
       [void],
@@ -334,6 +354,11 @@ getFunction(nameOrSignature: 'calculateTotalOwed'): TypedContractMethod<
       'view'
     >;
 getFunction(nameOrSignature: 'capacityManager'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'debtAuctionManager'): TypedContractMethod<
       [],
       [string],
       'view'
@@ -392,6 +417,11 @@ getFunction(nameOrSignature: 'repaymentRegistry'): TypedContractMethod<
       [],
       [string],
       'view'
+    >;
+getFunction(nameOrSignature: 'setDebtAuctionManager'): TypedContractMethod<
+      [_debtAuctionManager: AddressLike, ],
+      [void],
+      'nonpayable'
     >;
 getFunction(nameOrSignature: 'setMarketplace'): TypedContractMethod<
       [_marketplace: AddressLike, ],

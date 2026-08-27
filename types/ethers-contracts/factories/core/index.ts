@@ -3,6 +3,7 @@
 /* eslint-disable */
 export { ArtefactRegistry__factory } from './ArtefactRegistry__factory.js';
 export { CapacityManager__factory } from './CapacityManager__factory.js';
+export { DebtAuctionManager__factory } from './DebtAuctionManager__factory.js';
 export { EligibilityRegistry__factory } from './EligibilityRegistry__factory.js';
 export { LoanMarketplace__factory } from './LoanMarketplace__factory.js';
 export { LoanVault__factory } from './LoanVault__factory.js';

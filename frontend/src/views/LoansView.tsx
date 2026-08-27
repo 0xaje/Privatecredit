@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { deployment, useCreditcoinWallet } from '../wallet';
+import { Gavel } from 'lucide-react';
+import { formatUnits } from 'ethers';
 
 interface LoansViewProps {
   borrowerAddress: string;
@@ -15,8 +17,9 @@ const MARKETPLACE_ABI = [
 const VAULT_ABI = ['function repayLoan(uint256 loanId) external payable'];
 
 export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewProps) {
-  const [mode, setMode] = useState<'borrower' | 'lender'>('borrower');
+  const [mode, setMode] = useState<'borrower' | 'lender' | 'auctions'>('borrower');
   const [capacity, setCapacity] = useState<{ available: string; used: string; locked: string } | null>(null);
+  const [auctions, setAuctions] = useState<any[]>([]);
   const [showBorrowForm, setShowBorrowForm] = useState(false);
   const [borrowForm, setBorrowForm] = useState({ amount: '', maxAprBps: '1000', maxDuration: '2592000', collateral: '' });
   const [showAcceptForm, setShowAcceptForm] = useState(false);
@@ -30,12 +33,30 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
   const { address, isConnected, send } = useCreditcoinWallet();
   const activeAddress = address || borrowerAddress;
 
+  const loadAuctions = () => {
+    api.getAuctions()
+      .then(res => setAuctions(res.auctions || []))
+      .catch(() => setAuctions([]));
+  };
+
   useEffect(() => {
     if (!activeAddress) return;
     api.getCapacity(activeAddress)
       .then(res => setCapacity({ available: res.availableCapacity, used: res.usedCapacity, locked: res.defaultedLockedCapacity || '0' }))
       .catch(() => setCapacity(null));
-  }, [activeAddress, submitting]);
+
+    loadAuctions();
+
+    // Subscribe to SSE live updates
+    const unsubscribe = api.subscribeToEvents((event) => {
+      if (event.type === 'AUCTION_UPDATED' || event.type === 'NODE_UPDATED' || event.type === 'NODE_ADDED') {
+        loadAuctions();
+        onLoanAction();
+      }
+    });
+
+    return () => unsubscribe();
+  }, [activeAddress, submitting, onLoanAction]);
 
   const usedNum = capacity ? Number(capacity.used) / 1e18 : 0;
   const lockedNum = capacity ? Number(capacity.locked) / 1e18 : 0;
@@ -52,6 +73,7 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
       const receipt = await tx.wait();
       setResult(`${label} confirmed: ${receipt.hash}`);
       onLoanAction();
+      loadAuctions();
     } catch (error: any) {
       setResult(`Error: ${error.message}`);
     } finally {
@@ -89,13 +111,45 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
     'Repayment',
   ).then(() => setShowRepayForm(false));
 
+  const handleBidAuction = async (auctionId: string, reservePrice: string) => {
+    if (!activeAddress) return;
+    setSubmitting(true);
+    setResult(null);
+    try {
+      await api.bidAuction(auctionId, activeAddress, reservePrice);
+      setResult(`Auction bid submitted successfully!`);
+      loadAuctions();
+      onLoanAction();
+    } catch (err: any) {
+      setResult(`Error: ${err.message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="view-panel">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <h3 className="view-title" style={{ margin: 0 }}>Loans</h3>
+        <h3 className="view-title" style={{ margin: 0 }}>Loans & Recovery</h3>
         <div className="mode-toggle" style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '8px' }}>
-          <button style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: mode === 'borrower' ? 'var(--accent-color)' : 'transparent', color: mode === 'borrower' ? '#fff' : 'var(--text-secondary)' }} onClick={() => { setMode('borrower'); setResult(null); }}>Borrower</button>
-          <button style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: mode === 'lender' ? 'var(--node-loan)' : 'transparent', color: mode === 'lender' ? '#fff' : 'var(--text-secondary)' }} onClick={() => { setMode('lender'); setResult(null); }}>Lender</button>
+          <button
+            style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: mode === 'borrower' ? 'var(--accent-color)' : 'transparent', color: mode === 'borrower' ? '#fff' : 'var(--text-secondary)' }}
+            onClick={() => { setMode('borrower'); setResult(null); }}
+          >
+            Borrower
+          </button>
+          <button
+            style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: mode === 'lender' ? 'var(--node-loan)' : 'transparent', color: mode === 'lender' ? '#fff' : 'var(--text-secondary)' }}
+            onClick={() => { setMode('lender'); setResult(null); }}
+          >
+            Lender
+          </button>
+          <button
+            style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: mode === 'auctions' ? '#d97706' : 'transparent', color: mode === 'auctions' ? '#fff' : 'var(--text-secondary)' }}
+            onClick={() => { setMode('auctions'); setResult(null); }}
+          >
+            Debt Auctions ({auctions.filter(a => a.status === 'ACTIVE').length})
+          </button>
         </div>
       </div>
 
@@ -140,6 +194,74 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
           {!showOfferForm ? <button className="primary-action-btn" style={{ background: 'linear-gradient(135deg, var(--node-loan), #be185d)' }} onClick={() => setShowOfferForm(true)}>Make Loan Offer</button> : <div className="borrow-form"><div className="inspector-label">NEW LENDER OFFER</div><div className="form-field"><label>Request ID</label><input type="text" value={offerForm.requestId} onChange={e => setOfferForm({ ...offerForm, requestId: e.target.value })} /></div><div className="form-field"><label>Principal (wei)</label><input type="text" value={offerForm.principal} onChange={e => setOfferForm({ ...offerForm, principal: e.target.value })} /></div><div className="form-field"><label>APR (bps)</label><input type="text" value={offerForm.aprBps} onChange={e => setOfferForm({ ...offerForm, aprBps: e.target.value })} /></div><div className="form-field"><label>Duration (seconds)</label><input type="text" value={offerForm.duration} onChange={e => setOfferForm({ ...offerForm, duration: e.target.value })} /></div><div className="form-field"><label>Required Collateral (wei)</label><input type="text" value={offerForm.requiredCollateral} onChange={e => setOfferForm({ ...offerForm, requiredCollateral: e.target.value })} /></div><div className="form-actions"><button className="primary-action-btn" style={{ background: 'linear-gradient(135deg, var(--node-loan), #be185d)' }} onClick={() => void handleOfferSubmit()} disabled={submitting}>{submitting ? 'Awaiting signature...' : 'Sign Funded Offer'}</button><button className="secondary-action-btn" onClick={() => setShowOfferForm(false)}>Cancel</button></div></div>}
         </>
       )}
+
+      {mode === 'auctions' && (
+        <div className="space-y-4">
+          <div className="inspector-label" style={{ marginBottom: '8px' }}>SECONDARY DEBT RECOVERY & LIQUIDATION</div>
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+            Buy defaulted loan debt claims at a discount. Liquidators settle debt notes and claim underlying pledged collateral directly.
+          </p>
+
+          {auctions.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+              <Gavel style={{ width: '32px', height: '32px', color: '#9ca3af', margin: '0 auto 8px' }} />
+              <div style={{ fontSize: '13px', color: '#9ca3af' }}>No defaulted debt auctions currently open.</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {auctions.map((a) => {
+                const isSettled = a.status === 'SETTLED';
+                const principalFormatted = a.principal ? Number(formatUnits(a.principal, 18)).toFixed(2) : '0';
+                return (
+                  <div
+                    key={a.id}
+                    style={{
+                      padding: '16px',
+                      borderRadius: '12px',
+                      background: 'rgba(15, 23, 42, 0.8)',
+                      border: isSettled ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <span style={{ fontWeight: 600, fontSize: '14px', color: '#f3f4f6' }}>Loan #{a.loanId} Debt Note</span>
+                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: isSettled ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)', color: isSettled ? '#34d399' : '#fbbf24' }}>
+                        {a.status}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '12px', fontSize: '12px' }}>
+                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '6px' }}>
+                        <div style={{ color: '#9ca3af', fontSize: '10px' }}>Principal</div>
+                        <div style={{ fontWeight: 600, color: '#f3f4f6' }}>{principalFormatted} CTC</div>
+                      </div>
+                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '6px' }}>
+                        <div style={{ color: '#9ca3af', fontSize: '10px' }}>Discount</div>
+                        <div style={{ fontWeight: 600, color: '#fbbf24' }}>-{(a.discountBps / 100).toFixed(0)}%</div>
+                      </div>
+                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '6px' }}>
+                        <div style={{ color: '#9ca3af', fontSize: '10px' }}>Borrower</div>
+                        <div style={{ fontWeight: 600, color: '#9ca3af', fontFamily: 'monospace' }}>{a.borrower.slice(0, 6)}...{a.borrower.slice(-4)}</div>
+                      </div>
+                    </div>
+
+                    {!isSettled && (
+                      <button
+                        className="primary-action-btn"
+                        style={{ width: '100%', background: 'linear-gradient(135deg, #d97706, #b45309)' }}
+                        onClick={() => handleBidAuction(a.id, a.reservePrice)}
+                        disabled={submitting}
+                      >
+                        {submitting ? 'Submitting...' : `Buy Debt Claim (${(Number(principalFormatted) * (1 - a.discountBps / 10000)).toFixed(2)} CTC)`}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {result && <div className="result-msg" style={{ marginTop: '16px' }}>{result}</div>}
     </div>
   );

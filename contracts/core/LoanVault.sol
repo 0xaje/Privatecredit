@@ -17,6 +17,7 @@ contract LoanVault is Ownable, ReentrancyGuard, Pausable, ILoanVault {
     ICapacityManager public immutable capacityManager;
     IRepaymentRegistry public repaymentRegistry;
     address public marketplace;
+    address public debtAuctionManager;
 
     error Unauthorized();
     error TransferFailed();
@@ -36,6 +37,10 @@ contract LoanVault is Ownable, ReentrancyGuard, Pausable, ILoanVault {
     function setRepaymentRegistry(address _repaymentRegistry) external onlyOwner {
         require(_repaymentRegistry != address(0), "zero repayment registry");
         repaymentRegistry = IRepaymentRegistry(_repaymentRegistry);
+    }
+
+    function setDebtAuctionManager(address _debtAuctionManager) external onlyOwner {
+        debtAuctionManager = _debtAuctionManager;
     }
 
     modifier onlyMarketplace() {
