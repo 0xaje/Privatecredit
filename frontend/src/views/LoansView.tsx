@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { deployment, useCreditcoinWallet } from '../wallet';
-import { Gavel } from 'lucide-react';
-import { formatUnits } from 'ethers';
+import { Gavel, DollarSign, ArrowUpRight, CheckCircle2, Zap } from 'lucide-react';
+import { formatUnits, parseEther } from 'ethers';
 
 interface LoansViewProps {
   borrowerAddress: string;
@@ -17,252 +17,471 @@ const MARKETPLACE_ABI = [
 const VAULT_ABI = ['function repayLoan(uint256 loanId) external payable'];
 
 export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewProps) {
-  const [mode, setMode] = useState<'borrower' | 'lender' | 'auctions'>('borrower');
+  const [deskTab, setDeskTab] = useState<'borrow' | 'lender' | 'repay' | 'auctions'>('borrow');
   const [capacity, setCapacity] = useState<{ available: string; used: string; locked: string } | null>(null);
   const [auctions, setAuctions] = useState<any[]>([]);
-  const [showBorrowForm, setShowBorrowForm] = useState(false);
-  const [borrowForm, setBorrowForm] = useState({ amount: '', maxAprBps: '1000', maxDuration: '2592000', collateral: '' });
-  const [showAcceptForm, setShowAcceptForm] = useState(false);
-  const [acceptForm, setAcceptForm] = useState({ offerId: '', collateralAmount: '' });
-  const [showRepayForm, setShowRepayForm] = useState(false);
-  const [repayForm, setRepayForm] = useState({ loanId: '', amount: '' });
-  const [showOfferForm, setShowOfferForm] = useState(false);
-  const [offerForm, setOfferForm] = useState({ requestId: '', aprBps: '900', duration: '2592000', requiredCollateral: '', principal: '' });
+
+  // Borrow Form (Formatted human units)
+  const [borrowAmountCTC, setBorrowAmountCTC] = useState<string>('1.0');
+  const [maxAprPct, setMaxAprPct] = useState<number>(8.5);
+  const [durationDays, setDurationDays] = useState<number>(30);
+  const collateralPct = 20; // 20% collateral required for Tier 1
+
+  // Lender Offer Form
+  const [targetRequestId, setTargetRequestId] = useState<string>('1');
+  const [offerPrincipalCTC, setOfferPrincipalCTC] = useState<string>('1.0');
+  const [offerAprPct, setOfferAprPct] = useState<number>(8.0);
+  const offerDurationDays = 30;
+  const [offerCollateralCTC, setOfferCollateralCTC] = useState<string>('0.2');
+
+  // Repayment Form
+  const [repayLoanId, setRepayLoanId] = useState<string>('1');
+  const [repayAmountCTC, setRepayAmountCTC] = useState<string>('1.02');
+
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [isError, setIsError] = useState(false);
+
   const { address, isConnected, send } = useCreditcoinWallet();
   const activeAddress = address || borrowerAddress;
 
-  const loadAuctions = () => {
+  const loadData = () => {
+    if (activeAddress) {
+      api.getCapacity(activeAddress)
+        .then(res => setCapacity({ available: res.availableCapacity, used: res.usedCapacity, locked: res.defaultedLockedCapacity || '0' }))
+        .catch(() => setCapacity(null));
+    }
     api.getAuctions()
       .then(res => setAuctions(res.auctions || []))
       .catch(() => setAuctions([]));
   };
 
   useEffect(() => {
-    if (!activeAddress) return;
-    api.getCapacity(activeAddress)
-      .then(res => setCapacity({ available: res.availableCapacity, used: res.usedCapacity, locked: res.defaultedLockedCapacity || '0' }))
-      .catch(() => setCapacity(null));
-
-    loadAuctions();
-
-    // Subscribe to SSE live updates
-    const unsubscribe = api.subscribeToEvents((event) => {
-      if (event.type === 'AUCTION_UPDATED' || event.type === 'NODE_UPDATED' || event.type === 'NODE_ADDED') {
-        loadAuctions();
-        onLoanAction();
-      }
+    loadData();
+    const unsubscribe = api.subscribeToEvents(() => {
+      loadData();
+      onLoanAction();
     });
-
     return () => unsubscribe();
-  }, [activeAddress, submitting, onLoanAction]);
+  }, [activeAddress, onLoanAction]);
 
-  const usedNum = capacity ? Number(capacity.used) / 1e18 : 0;
-  const lockedNum = capacity ? Number(capacity.locked) / 1e18 : 0;
-  const availNum = capacity ? Number(capacity.available) / 1e18 : 0;
-  const totalNum = usedNum + lockedNum + availNum;
-  const usedPct = totalNum > 0 ? ((usedNum + lockedNum) / totalNum) * 100 : 0;
+  const availNum = capacity ? Number(formatUnits(capacity.available, 18)) : 0;
+  const usedNum = capacity ? Number(formatUnits(capacity.used, 18)) : 0;
 
   const runTransaction = async (action: () => Promise<any>, label: string) => {
-    if (!isConnected || !activeAddress) throw new Error('Connect a Creditcoin wallet before signing.');
+    if (!isConnected || !activeAddress) {
+      setIsError(true);
+      setResult('Please connect your Web3 wallet via RainbowKit in the top right.');
+      return;
+    }
     setSubmitting(true);
     setResult(null);
+    setIsError(false);
     try {
       const tx = await action();
       const receipt = await tx.wait();
-      setResult(`${label} confirmed: ${receipt.hash}`);
+      setResult(`${label} confirmed on Creditcoin CC3! Tx: ${receipt.hash}`);
       onLoanAction();
-      loadAuctions();
+      loadData();
     } catch (error: any) {
-      setResult(`Error: ${error.message}`);
+      setIsError(true);
+      setResult(error.shortMessage || error.message || 'Transaction failed');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleBorrowSubmit = () => runTransaction(
-    () => send(deployment.contracts.loanMarketplace, MARKETPLACE_ABI, 'createBorrowRequest', [
-      borrowForm.amount,
-      Number(borrowForm.maxAprBps),
-      Number(borrowForm.maxDuration),
-      borrowForm.collateral,
-    ]),
-    'Borrow request',
-  ).then(() => setShowBorrowForm(false));
+  // 1. Submit Borrow Request
+  const handleBorrowSubmit = () => {
+    const amountWei = parseEther(borrowAmountCTC || '0');
+    const collateralWei = parseEther(((Number(borrowAmountCTC || 0) * collateralPct) / 100).toFixed(6));
+    const durationSeconds = durationDays * 86400;
+    const aprBps = Math.round(maxAprPct * 100);
 
-  const handleAcceptSubmit = () => runTransaction(
-    () => send(deployment.contracts.loanMarketplace, MARKETPLACE_ABI, 'acceptOffer', [Number(acceptForm.offerId)], acceptForm.collateralAmount),
-    'Offer acceptance',
-  ).then(() => setShowAcceptForm(false));
+    return runTransaction(
+      () => send(deployment.contracts.loanMarketplace, MARKETPLACE_ABI, 'createBorrowRequest', [
+        amountWei.toString(),
+        aprBps,
+        durationSeconds,
+        collateralWei.toString(),
+      ]),
+      'Borrow Request'
+    );
+  };
 
-  const handleOfferSubmit = () => runTransaction(
-    () => send(deployment.contracts.loanMarketplace, MARKETPLACE_ABI, 'createLenderOffer', [
-      Number(offerForm.requestId),
-      Number(offerForm.aprBps),
-      Number(offerForm.duration),
-      offerForm.requiredCollateral,
-    ], offerForm.principal),
-    'Lender offer',
-  ).then(() => setShowOfferForm(false));
+  // 2. Submit Funded Lender Offer
+  const handleLenderOfferSubmit = () => {
+    const principalWei = parseEther(offerPrincipalCTC || '0');
+    const reqCollateralWei = parseEther(offerCollateralCTC || '0');
+    const durationSeconds = offerDurationDays * 86400;
+    const aprBps = Math.round(offerAprPct * 100);
 
-  const handleRepaySubmit = () => runTransaction(
-    () => send(deployment.contracts.loanVault, VAULT_ABI, 'repayLoan', [Number(repayForm.loanId)], repayForm.amount),
-    'Repayment',
-  ).then(() => setShowRepayForm(false));
+    return runTransaction(
+      () => send(deployment.contracts.loanMarketplace, MARKETPLACE_ABI, 'createLenderOffer', [
+        Number(targetRequestId),
+        aprBps,
+        durationSeconds,
+        reqCollateralWei.toString(),
+      ], principalWei.toString()),
+      'Funded Lender Offer'
+    );
+  };
 
-  const handleBidAuction = async (auctionId: string, reservePrice: string) => {
+  // 3. Submit Repayment
+  const handleRepaySubmit = () => {
+    const repayWei = parseEther(repayAmountCTC || '0');
+    return runTransaction(
+      () => send(deployment.contracts.loanVault, VAULT_ABI, 'repayLoan', [Number(repayLoanId)], repayWei.toString()),
+      'Loan Repayment'
+    );
+  };
+
+  // 4. Liquidate / Buy Defaulted Debt
+  const handleBidAuction = async (auctionId: string, reservePriceWei: string) => {
     if (!activeAddress) return;
     setSubmitting(true);
     setResult(null);
+    setIsError(false);
     try {
-      await api.bidAuction(auctionId, activeAddress, reservePrice);
-      setResult(`Auction bid submitted successfully!`);
-      loadAuctions();
+      await api.bidAuction(auctionId, activeAddress, reservePriceWei);
+      setResult(`Debt claim purchased successfully! Payout routed to lender.`);
+      loadData();
       onLoanAction();
     } catch (err: any) {
-      setResult(`Error: ${err.message}`);
+      setIsError(true);
+      setResult(`Auction bid failed: ${err.message}`);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="view-panel">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <h3 className="view-title" style={{ margin: 0 }}>Loans & Recovery</h3>
-        <div className="mode-toggle" style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '8px' }}>
-          <button
-            style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: mode === 'borrower' ? 'var(--accent-color)' : 'transparent', color: mode === 'borrower' ? '#fff' : 'var(--text-secondary)' }}
-            onClick={() => { setMode('borrower'); setResult(null); }}
-          >
-            Borrower
-          </button>
-          <button
-            style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: mode === 'lender' ? 'var(--node-loan)' : 'transparent', color: mode === 'lender' ? '#fff' : 'var(--text-secondary)' }}
-            onClick={() => { setMode('lender'); setResult(null); }}
-          >
-            Lender
-          </button>
-          <button
-            style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: mode === 'auctions' ? '#d97706' : 'transparent', color: mode === 'auctions' ? '#fff' : 'var(--text-secondary)' }}
-            onClick={() => { setMode('auctions'); setResult(null); }}
-          >
-            Debt Auctions ({auctions.filter(a => a.status === 'ACTIVE').length})
-          </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div className="workspace-header">
+        <div className="workspace-title">
+          <Zap className="w-5 h-5 text-sky-400" />
+          <span>Credit Market & Lending Desk</span>
         </div>
       </div>
 
-      {mode === 'borrower' && (
-        <>
-          <div className="capacity-section">
-            <div className="inspector-label">BORROWING CAPACITY</div>
-            <div className="capacity-bar-container">
-              <div className="capacity-bar"><div className="capacity-bar-fill" style={{ width: `${usedPct}%` }} /></div>
-              <div className="capacity-labels"><span>Active: {usedNum.toFixed(0)} CTC</span><span>Locked: {lockedNum.toFixed(0)} CTC</span><span>Available: {availNum.toFixed(0)} CTC</span></div>
+      {/* Subtab Switcher */}
+      <div className="subtab-switcher">
+        <button
+          className={`subtab-btn ${deskTab === 'borrow' ? 'active' : ''}`}
+          onClick={() => { setDeskTab('borrow'); setResult(null); }}
+        >
+          Borrow Desk
+        </button>
+        <button
+          className={`subtab-btn ${deskTab === 'lender' ? 'active' : ''}`}
+          onClick={() => { setDeskTab('lender'); setResult(null); }}
+        >
+          Lender Desk
+        </button>
+        <button
+          className={`subtab-btn ${deskTab === 'repay' ? 'active' : ''}`}
+          onClick={() => { setDeskTab('repay'); setResult(null); }}
+        >
+          Repay Desk
+        </button>
+        <button
+          className={`subtab-btn ${deskTab === 'auctions' ? 'active' : ''}`}
+          onClick={() => { setDeskTab('auctions'); setResult(null); }}
+        >
+          Auctions ({auctions.filter(a => a.status === 'ACTIVE').length})
+        </button>
+      </div>
+
+      {/* Capacity HUD */}
+      <div className="stats-grid-2">
+        <div className="glass-stat-card">
+          <div className="glass-stat-label">Available Capacity</div>
+          <div className="glass-stat-val" style={{ color: '#38bdf8' }}>{availNum.toFixed(2)} CTC</div>
+        </div>
+        <div className="glass-stat-card">
+          <div className="glass-stat-label">Active Borrowed</div>
+          <div className="glass-stat-val" style={{ color: '#f59e0b' }}>{usedNum.toFixed(2)} CTC</div>
+        </div>
+      </div>
+
+      {/* ─── 1. BORROW DESK ─── */}
+      {deskTab === 'borrow' && (
+        <div>
+          <div className="form-group">
+            <div className="form-label-row">
+              <label className="form-label">Loan Amount</label>
+              <span className="form-hint">Max: {availNum.toFixed(2)} CTC</span>
+            </div>
+            <div className="input-container">
+              <input
+                type="number"
+                step="0.1"
+                min="0.1"
+                max={availNum}
+                value={borrowAmountCTC}
+                onChange={e => setBorrowAmountCTC(e.target.value)}
+                className="styled-input"
+                placeholder="1.0"
+              />
+              <span className="input-currency-tag">CTC</span>
+            </div>
+            <div className="preset-chips-row">
+              <button className="preset-chip" onClick={() => setBorrowAmountCTC('0.5')}>0.5 CTC</button>
+              <button className="preset-chip" onClick={() => setBorrowAmountCTC('1.0')}>1.0 CTC</button>
+              <button className="preset-chip" onClick={() => setBorrowAmountCTC((availNum * 0.5).toFixed(2))}>50% Cap</button>
+              <button className="preset-chip" onClick={() => setBorrowAmountCTC(availNum.toFixed(2))}>Max Cap</button>
             </div>
           </div>
-          <div className="loans-stats">
-            <div className="stat-card"><div className="stat-value">{availNum.toFixed(0)}</div><div className="stat-label">Available CTC</div></div>
-            <div className="stat-card"><div className="stat-value">{usedNum.toFixed(0)}</div><div className="stat-label">Active Used</div></div>
-            <div className="stat-card"><div className="stat-value">{lockedNum.toFixed(0)}</div><div className="stat-label">Default Locked</div></div>
+
+          <div className="form-group">
+            <div className="form-label-row">
+              <label className="form-label">Max Accepted APR</label>
+              <span className="form-hint" style={{ color: '#38bdf8' }}>{maxAprPct}%</span>
+            </div>
+            <input
+              type="range"
+              min="3"
+              max="25"
+              step="0.5"
+              value={maxAprPct}
+              onChange={e => setMaxAprPct(parseFloat(e.target.value))}
+              style={{ width: '100%', accentColor: '#0ea5e9' }}
+            />
           </div>
-          {!showBorrowForm ? (
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <button className="primary-action-btn" onClick={() => setShowBorrowForm(true)} disabled={availNum <= 0}>{availNum > 0 ? 'Create Borrow Request' : 'No Capacity Available'}</button>
-              <button className="secondary-action-btn" onClick={() => setShowAcceptForm(true)}>Accept Offer</button>
-              <button className="secondary-action-btn" onClick={() => setShowRepayForm(true)}>Repay Loan</button>
+
+          <div className="form-group">
+            <label className="form-label">Loan Duration</label>
+            <div className="preset-chips-row" style={{ marginTop: 0 }}>
+              {[7, 14, 30, 90].map(days => (
+                <button
+                  key={days}
+                  className={`preset-chip ${durationDays === days ? 'active' : ''}`}
+                  style={{
+                    flex: 1,
+                    textAlign: 'center',
+                    background: durationDays === days ? 'rgba(14,165,233,0.2)' : undefined,
+                    borderColor: durationDays === days ? '#0ea5e9' : undefined,
+                    color: durationDays === days ? '#38bdf8' : undefined,
+                  }}
+                  onClick={() => setDurationDays(days)}
+                >
+                  {days} Days
+                </button>
+              ))}
             </div>
-          ) : (
-            <div className="borrow-form">
-              <div className="inspector-label">NEW BORROW REQUEST</div>
-              <div className="form-field"><label>Amount (wei)</label><input type="text" value={borrowForm.amount} onChange={e => setBorrowForm({ ...borrowForm, amount: e.target.value })} placeholder="1000000000000000000" /></div>
-              <div className="form-field"><label>Max APR (bps)</label><input type="text" value={borrowForm.maxAprBps} onChange={e => setBorrowForm({ ...borrowForm, maxAprBps: e.target.value })} /></div>
-              <div className="form-field"><label>Max Duration (seconds)</label><input type="text" value={borrowForm.maxDuration} onChange={e => setBorrowForm({ ...borrowForm, maxDuration: e.target.value })} /></div>
-              <div className="form-field"><label>Collateral (wei)</label><input type="text" value={borrowForm.collateral} onChange={e => setBorrowForm({ ...borrowForm, collateral: e.target.value })} /></div>
-              <div className="form-actions"><button className="primary-action-btn" onClick={() => void handleBorrowSubmit()} disabled={submitting}>{submitting ? 'Awaiting signature...' : 'Sign Request'}</button><button className="secondary-action-btn" onClick={() => setShowBorrowForm(false)}>Cancel</button></div>
+          </div>
+
+          <div className="glass-stat-card" style={{ marginBottom: '14px', background: 'rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#94a3b8' }}>
+              <span>Required Collateral ({collateralPct}% LTV tier):</span>
+              <span style={{ fontWeight: 700, color: '#f8fafc', fontFamily: 'monospace' }}>
+                {((Number(borrowAmountCTC || 0) * collateralPct) / 100).toFixed(3)} CTC
+              </span>
             </div>
-          )}
-          {showAcceptForm && <div className="borrow-form" style={{ marginTop: '16px' }}><div className="inspector-label">ACCEPT LENDER OFFER</div><div className="form-field"><label>Offer ID</label><input type="text" value={acceptForm.offerId} onChange={e => setAcceptForm({ ...acceptForm, offerId: e.target.value })} /></div><div className="form-field"><label>Collateral Amount (wei)</label><input type="text" value={acceptForm.collateralAmount} onChange={e => setAcceptForm({ ...acceptForm, collateralAmount: e.target.value })} /></div><div className="form-actions"><button className="primary-action-btn" onClick={() => void handleAcceptSubmit()} disabled={submitting}>{submitting ? 'Awaiting signature...' : 'Sign Acceptance'}</button><button className="secondary-action-btn" onClick={() => setShowAcceptForm(false)}>Cancel</button></div></div>}
-          {showRepayForm && <div className="borrow-form" style={{ marginTop: '16px' }}><div className="inspector-label">REPAY ACTIVE LOAN</div><div className="form-field"><label>Loan ID</label><input type="text" value={repayForm.loanId} onChange={e => setRepayForm({ ...repayForm, loanId: e.target.value })} /></div><div className="form-field"><label>Exact repayment amount (wei)</label><input type="text" value={repayForm.amount} onChange={e => setRepayForm({ ...repayForm, amount: e.target.value })} /></div><div className="form-actions"><button className="primary-action-btn" onClick={() => void handleRepaySubmit()} disabled={submitting}>{submitting ? 'Awaiting signature...' : 'Sign Repayment'}</button><button className="secondary-action-btn" onClick={() => setShowRepayForm(false)}>Cancel</button></div></div>}
-        </>
+          </div>
+
+          <button
+            className="execute-btn"
+            onClick={handleBorrowSubmit}
+            disabled={submitting || availNum <= 0 || Number(borrowAmountCTC) <= 0}
+          >
+            {submitting ? 'Awaiting Signature...' : 'Submit Borrow Request'}
+            <ArrowUpRight className="w-4 h-4" />
+          </button>
+        </div>
       )}
 
-      {mode === 'lender' && (
-        <>
-          <div className="inspector-label" style={{ marginBottom: '12px' }}>LENDER ACTIONS</div>
-          {!showOfferForm ? <button className="primary-action-btn" style={{ background: 'linear-gradient(135deg, var(--node-loan), #be185d)' }} onClick={() => setShowOfferForm(true)}>Make Loan Offer</button> : <div className="borrow-form"><div className="inspector-label">NEW LENDER OFFER</div><div className="form-field"><label>Request ID</label><input type="text" value={offerForm.requestId} onChange={e => setOfferForm({ ...offerForm, requestId: e.target.value })} /></div><div className="form-field"><label>Principal (wei)</label><input type="text" value={offerForm.principal} onChange={e => setOfferForm({ ...offerForm, principal: e.target.value })} /></div><div className="form-field"><label>APR (bps)</label><input type="text" value={offerForm.aprBps} onChange={e => setOfferForm({ ...offerForm, aprBps: e.target.value })} /></div><div className="form-field"><label>Duration (seconds)</label><input type="text" value={offerForm.duration} onChange={e => setOfferForm({ ...offerForm, duration: e.target.value })} /></div><div className="form-field"><label>Required Collateral (wei)</label><input type="text" value={offerForm.requiredCollateral} onChange={e => setOfferForm({ ...offerForm, requiredCollateral: e.target.value })} /></div><div className="form-actions"><button className="primary-action-btn" style={{ background: 'linear-gradient(135deg, var(--node-loan), #be185d)' }} onClick={() => void handleOfferSubmit()} disabled={submitting}>{submitting ? 'Awaiting signature...' : 'Sign Funded Offer'}</button><button className="secondary-action-btn" onClick={() => setShowOfferForm(false)}>Cancel</button></div></div>}
-        </>
+      {/* ─── 2. LENDER DESK ─── */}
+      {deskTab === 'lender' && (
+        <div>
+          <div className="form-group">
+            <div className="form-label-row">
+              <label className="form-label">Target Borrow Request ID</label>
+              <span className="form-hint">Open market requests</span>
+            </div>
+            <div className="input-container">
+              <input
+                type="text"
+                value={targetRequestId}
+                onChange={e => setTargetRequestId(e.target.value)}
+                className="styled-input"
+                placeholder="1"
+              />
+              <span className="input-currency-tag">#ID</span>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <div className="form-label-row">
+              <label className="form-label">Capital to Fund</label>
+            </div>
+            <div className="input-container">
+              <input
+                type="number"
+                step="0.1"
+                value={offerPrincipalCTC}
+                onChange={e => setOfferPrincipalCTC(e.target.value)}
+                className="styled-input"
+                placeholder="1.0"
+              />
+              <span className="input-currency-tag">CTC</span>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <div className="form-label-row">
+              <label className="form-label">Offered APR</label>
+              <span className="form-hint" style={{ color: '#10b981' }}>{offerAprPct}%</span>
+            </div>
+            <input
+              type="range"
+              min="3"
+              max="20"
+              step="0.5"
+              value={offerAprPct}
+              onChange={e => setOfferAprPct(parseFloat(e.target.value))}
+              style={{ width: '100%', accentColor: '#10b981' }}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Required Collateral</label>
+            <div className="input-container">
+              <input
+                type="number"
+                step="0.05"
+                value={offerCollateralCTC}
+                onChange={e => setOfferCollateralCTC(e.target.value)}
+                className="styled-input"
+                placeholder="0.2"
+              />
+              <span className="input-currency-tag">CTC</span>
+            </div>
+          </div>
+
+          <button
+            className="execute-btn"
+            style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
+            onClick={handleLenderOfferSubmit}
+            disabled={submitting || Number(offerPrincipalCTC) <= 0}
+          >
+            {submitting ? 'Awaiting Signature...' : 'Deposit & Fund Offer'}
+            <DollarSign className="w-4 h-4" />
+          </button>
+        </div>
       )}
 
-      {mode === 'auctions' && (
-        <div className="space-y-4">
-          <div className="inspector-label" style={{ marginBottom: '8px' }}>SECONDARY DEBT RECOVERY & LIQUIDATION</div>
-          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-            Buy defaulted loan debt claims at a discount. Liquidators settle debt notes and claim underlying pledged collateral directly.
-          </p>
+      {/* ─── 3. REPAY DESK ─── */}
+      {deskTab === 'repay' && (
+        <div>
+          <div className="form-group">
+            <label className="form-label">Active Loan ID</label>
+            <div className="input-container">
+              <input
+                type="text"
+                value={repayLoanId}
+                onChange={e => setRepayLoanId(e.target.value)}
+                className="styled-input"
+                placeholder="1"
+              />
+              <span className="input-currency-tag">#ID</span>
+            </div>
+          </div>
 
+          <div className="form-group">
+            <div className="form-label-row">
+              <label className="form-label">Repayment Amount (Principal + Interest)</label>
+            </div>
+            <div className="input-container">
+              <input
+                type="number"
+                step="0.01"
+                value={repayAmountCTC}
+                onChange={e => setRepayAmountCTC(e.target.value)}
+                className="styled-input"
+                placeholder="1.02"
+              />
+              <span className="input-currency-tag">CTC</span>
+            </div>
+          </div>
+
+          <div className="glass-stat-card" style={{ marginBottom: '14px', background: 'rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#10b981' }}>
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Full repayment instantly unlocks borrower capacity and releases collateral.</span>
+            </div>
+          </div>
+
+          <button
+            className="execute-btn"
+            style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
+            onClick={handleRepaySubmit}
+            disabled={submitting || Number(repayAmountCTC) <= 0}
+          >
+            {submitting ? 'Awaiting Signature...' : 'Execute Full Repayment'}
+            <CheckCircle2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* ─── 4. DEBT AUCTIONS DESK ─── */}
+      {deskTab === 'auctions' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {auctions.length === 0 ? (
-            <div style={{ padding: '24px', textAlign: 'center', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.1)' }}>
-              <Gavel style={{ width: '32px', height: '32px', color: '#9ca3af', margin: '0 auto 8px' }} />
-              <div style={{ fontSize: '13px', color: '#9ca3af' }}>No defaulted debt auctions currently open.</div>
+            <div style={{ padding: '24px', textAlign: 'center', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
+              <Gavel className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+              <div style={{ fontSize: '0.82rem', color: '#94a3b8' }}>No defaulted debt notes on auction.</div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {auctions.map((a) => {
-                const isSettled = a.status === 'SETTLED';
-                const principalFormatted = a.principal ? Number(formatUnits(a.principal, 18)).toFixed(2) : '0';
-                return (
-                  <div
-                    key={a.id}
-                    style={{
-                      padding: '16px',
-                      borderRadius: '12px',
-                      background: 'rgba(15, 23, 42, 0.8)',
-                      border: isSettled ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                      <span style={{ fontWeight: 600, fontSize: '14px', color: '#f3f4f6' }}>Loan #{a.loanId} Debt Note</span>
-                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: isSettled ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)', color: isSettled ? '#34d399' : '#fbbf24' }}>
-                        {a.status}
-                      </span>
-                    </div>
+            auctions.map(a => {
+              const isSettled = a.status === 'SETTLED';
+              const principalFmt = a.principal ? Number(formatUnits(a.principal, 18)).toFixed(2) : '0';
+              const discountPct = (a.discountBps / 100).toFixed(0);
+              const buyPrice = (Number(principalFmt) * (1 - a.discountBps / 10000)).toFixed(2);
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '12px', fontSize: '12px' }}>
-                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '6px' }}>
-                        <div style={{ color: '#9ca3af', fontSize: '10px' }}>Principal</div>
-                        <div style={{ fontWeight: 600, color: '#f3f4f6' }}>{principalFormatted} CTC</div>
-                      </div>
-                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '6px' }}>
-                        <div style={{ color: '#9ca3af', fontSize: '10px' }}>Discount</div>
-                        <div style={{ fontWeight: 600, color: '#fbbf24' }}>-{(a.discountBps / 100).toFixed(0)}%</div>
-                      </div>
-                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '6px' }}>
-                        <div style={{ color: '#9ca3af', fontSize: '10px' }}>Borrower</div>
-                        <div style={{ fontWeight: 600, color: '#9ca3af', fontFamily: 'monospace' }}>{a.borrower.slice(0, 6)}...{a.borrower.slice(-4)}</div>
-                      </div>
-                    </div>
-
-                    {!isSettled && (
-                      <button
-                        className="primary-action-btn"
-                        style={{ width: '100%', background: 'linear-gradient(135deg, #d97706, #b45309)' }}
-                        onClick={() => handleBidAuction(a.id, a.reservePrice)}
-                        disabled={submitting}
-                      >
-                        {submitting ? 'Submitting...' : `Buy Debt Claim (${(Number(principalFormatted) * (1 - a.discountBps / 10000)).toFixed(2)} CTC)`}
-                      </button>
-                    )}
+              return (
+                <div
+                  key={a.id}
+                  style={{
+                    padding: '14px',
+                    borderRadius: '12px',
+                    background: 'rgba(15, 23, 42, 0.7)',
+                    border: isSettled ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(245,158,11,0.3)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f8fafc' }}>Loan #{a.loanId} Claim</span>
+                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '6px', background: isSettled ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)', color: isSettled ? '#34d399' : '#fbbf24' }}>
+                      {a.status}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#94a3b8', marginBottom: '10px' }}>
+                    <span>Debt: {principalFmt} CTC</span>
+                    <span style={{ color: '#fbbf24', fontWeight: 600 }}>Discount: -{discountPct}%</span>
+                  </div>
+                  {!isSettled && (
+                    <button
+                      className="execute-btn"
+                      style={{ background: 'linear-gradient(135deg, #d97706, #b45309)', padding: '8px 12px', fontSize: '0.8rem' }}
+                      onClick={() => handleBidAuction(a.id, a.reservePrice)}
+                      disabled={submitting}
+                    >
+                      {submitting ? 'Submitting...' : `Buy Claim (${buyPrice} CTC)`}
+                    </button>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       )}
 
-      {result && <div className="result-msg" style={{ marginTop: '16px' }}>{result}</div>}
+      {/* Result feedback */}
+      {result && (
+        <div className={`feedback-box ${isError ? 'error' : ''}`}>
+          {result}
+        </div>
+      )}
     </div>
   );
 }

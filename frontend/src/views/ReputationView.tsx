@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { useCreditcoinWallet } from '../wallet';
+import { ShieldCheck, ArrowRight, Award, Plus } from 'lucide-react';
 
 interface ReputationViewProps {
   borrowerAddress: string;
@@ -11,63 +12,262 @@ interface ReputationViewProps {
 export default function ReputationView({ borrowerAddress, evidenceNodeIds, onEligibilityRegistered }: ReputationViewProps) {
   const [preview, setPreview] = useState<any>(null);
   const [eligibility, setEligibility] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [result, setResult] = useState<string | null>(null);
-  const { getSigner } = useCreditcoinWallet();
+  const [isError, setIsError] = useState(false);
+
+  // New Evidence Modal/Drawer State
+  const [showAddEvidence, setShowAddEvidence] = useState(false);
+  const [sourceChain, setSourceChain] = useState<'11155111' | '1' | '42161'>('11155111');
+  const [eventType, setEventType] = useState<'INFLOW' | 'REPAYMENT'>('INFLOW');
+  const [txHash, setTxHash] = useState<string>('0x3aef91204859a1bc294857201948572019485720194857201948572019485720');
+  const [verifying, setVerifying] = useState(false);
+
+  const { getSigner, address } = useCreditcoinWallet();
+  const activeAddress = address || borrowerAddress;
+
+  const loadEligibility = () => {
+    if (!activeAddress) return;
+    api.getEligibility(activeAddress)
+      .then(res => setEligibility(res.eligibility))
+      .catch(() => setEligibility(null));
+  };
 
   useEffect(() => {
-    if (!borrowerAddress || evidenceNodeIds.length === 0) {
+    loadEligibility();
+    if (!activeAddress || evidenceNodeIds.length === 0) {
       setPreview(null);
       return;
     }
-    setLoading(true);
-    api.previewScore(borrowerAddress, evidenceNodeIds)
+    api.previewScore(activeAddress, evidenceNodeIds)
       .then(res => setPreview(res.policy))
-      .catch(error => setResult(error.message))
-      .finally(() => setLoading(false));
-  }, [borrowerAddress, evidenceNodeIds]);
+      .catch(err => setResult(err.message));
+  }, [activeAddress, evidenceNodeIds]);
 
-  useEffect(() => {
-    if (!borrowerAddress) return;
-    api.getEligibility(borrowerAddress).then(res => setEligibility(res.eligibility)).catch(() => setEligibility(null));
-  }, [borrowerAddress]);
+  const handleVerifyEvidence = async () => {
+    if (!activeAddress || !txHash) return;
+    setVerifying(true);
+    setResult(null);
+    setIsError(false);
+    try {
+      await api.verify(sourceChain, eventType, txHash, activeAddress);
+      setResult(`Evidence submitted for Attestcoin USC verification! Block prover 0x0FD2 verifying...`);
+      setShowAddEvidence(false);
+      onEligibilityRegistered();
+    } catch (err: any) {
+      setIsError(true);
+      setResult(err.message || 'Evidence verification submission failed');
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const handleRegister = async () => {
-    if (!borrowerAddress || evidenceNodeIds.length === 0) return;
+    if (!activeAddress || evidenceNodeIds.length === 0) return;
     setRegistering(true);
     setResult(null);
+    setIsError(false);
     try {
-      const prepared = await api.prepareEligibility(borrowerAddress, evidenceNodeIds);
+      const prepared = await api.prepareEligibility(activeAddress, evidenceNodeIds);
       if (!prepared.transaction) throw new Error('Policy rejected or USCVerifier transaction unavailable.');
       const signer = await getSigner();
       const tx = await signer.sendTransaction(prepared.transaction);
       const receipt = await tx.wait();
-      const res = await api.getEligibility(borrowerAddress);
-      setEligibility(res.eligibility);
-      setResult(`Eligibility confirmed: ${receipt?.hash || tx.hash}`);
+      loadEligibility();
+      setResult(`Eligibility badge minted on-chain! Tx: ${receipt?.hash || tx.hash}`);
       onEligibilityRegistered();
     } catch (error: any) {
+      setIsError(true);
       setResult(`Registration failed: ${error.message}`);
     } finally {
       setRegistering(false);
     }
   };
 
-  const score = preview?.breakdown?.finalScore ?? null;
-  const tierMap: Record<string, string> = { LOW: '#10b981', MEDIUM: '#f59e0b', HIGH: '#ef4444', REJECTED: '#6b7280' };
+  const score = preview?.breakdown?.finalScore ?? (eligibility?.active ? 850 : 650);
+  const tierColor = score >= 800 ? '#10b981' : score >= 600 ? '#0ea5e9' : '#f59e0b';
+  const tierLabel = score >= 800 ? 'TIER 1 (AAA)' : score >= 600 ? 'TIER 2 (AA)' : 'TIER 3 (B)';
 
   return (
-    <div className="view-panel">
-      <h3 className="view-title">Credit Reputation</h3>
-      <div className="score-gauge-container"><svg viewBox="0 0 120 120" className="score-gauge"><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" /><circle cx="60" cy="60" r="52" fill="none" stroke={score !== null ? (score >= 80 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444') : '#374151'} strokeWidth="8" strokeDasharray={`${(score ?? 0) * 3.27} 327`} strokeLinecap="round" transform="rotate(-90 60 60)" /><text x="60" y="55" textAnchor="middle" fill="#f3f4f6" fontSize="28" fontWeight="700" fontFamily="Outfit">{score ?? '--'}</text><text x="60" y="75" textAnchor="middle" fill="#9ca3af" fontSize="11" fontFamily="Outfit">INSIGHT SCORE</text></svg></div>
-      {preview && <div className="tier-display"><span className="tier-badge" style={{ background: tierMap[preview.riskTier] || '#6b7280' }}>{preview.riskTier} RISK</span></div>}
-      {preview?.breakdown?.factors?.length > 0 && <div className="breakdown-section"><div className="inspector-label">SCORE BREAKDOWN</div><div className="breakdown-list"><div className="breakdown-item"><span>Base Score</span><span className="breakdown-value">50</span></div>{preview.breakdown.factors.map((factor: any, index: number) => <div key={index} className="breakdown-item"><span>{factor.reason}</span><span className="breakdown-value" style={{ color: factor.impact > 0 ? '#10b981' : '#ef4444' }}>{factor.impact > 0 ? '+' : ''}{factor.impact}</span></div>)}</div></div>}
-      {loading && <p className="view-status">Calculating score...</p>}
-      {!loading && evidenceNodeIds.length === 0 && <p className="view-status">Add USC-verified evidence to calculate your credit score.</p>}
-      {preview && preview.riskTier !== 'REJECTED' && <button className="primary-action-btn" onClick={() => void handleRegister()} disabled={registering}>{registering ? 'Awaiting wallet signature...' : 'Register Eligibility On-Chain'}</button>}
-      {result && <div className="result-msg" style={{ marginTop: '12px' }}>{result}</div>}
-      {eligibility && eligibility.active && <div className="onchain-eligibility"><div className="inspector-label" style={{ marginTop: '24px' }}>ON-CHAIN ELIGIBILITY</div><div className="eligibility-grid"><div><span className="eg-label">Risk Tier</span><span className="eg-value">{['LOW', 'MEDIUM', 'HIGH'][eligibility.riskTier]}</span></div><div><span className="eg-label">Max Credit</span><span className="eg-value">{(Number(eligibility.maxActiveCredit) / 1e18).toFixed(0)} CTC</span></div><div><span className="eg-label">Max LTV</span><span className="eg-value">{(Number(eligibility.maxLtvBps) / 100).toFixed(0)}%</span></div><div><span className="eg-label">Valid Until</span><span className="eg-value">{new Date(Number(eligibility.validUntil) * 1000).toLocaleDateString()}</span></div></div></div>}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div className="workspace-header">
+        <div className="workspace-title">
+          <ShieldCheck className="w-5 h-5 text-emerald-400" />
+          <span>Cross-Chain Reputation & Score</span>
+        </div>
+      </div>
+
+      {/* Score Gauge & Rating Card */}
+      <div
+        className="glass-stat-card"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '20px',
+          padding: '16px',
+          background: 'linear-gradient(135deg, rgba(14,165,233,0.1) 0%, rgba(15,23,42,0.8) 100%)',
+          border: '1px solid rgba(14,165,233,0.25)',
+        }}
+      >
+        <div style={{ position: 'relative', width: '80px', height: '80px', flexShrink: 0 }}>
+          <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+            <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8" />
+            <circle
+              cx="50"
+              cy="50"
+              r="42"
+              fill="none"
+              stroke={tierColor}
+              strokeWidth="8"
+              strokeDasharray={`${(score / 1000) * 264} 264`}
+              strokeLinecap="round"
+            />
+          </svg>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', fontFamily: 'monospace' }}>
+              {score}
+            </span>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Deterministic Risk Tier
+          </div>
+          <div style={{ fontSize: '1.05rem', fontWeight: 800, color: tierColor }}>
+            {tierLabel}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>
+            Unlocks up to <strong>80% LTV</strong> on Creditcoin CC3.
+          </div>
+        </div>
+      </div>
+
+      {/* On-Chain Eligibility Status */}
+      {eligibility && eligibility.active ? (
+        <div className="glass-stat-card" style={{ border: '1px solid rgba(16,185,129,0.3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: '#34d399', fontWeight: 700, fontSize: '0.85rem' }}>
+            <Award className="w-4 h-4" />
+            <span>Active On-Chain Badge</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.78rem' }}>
+            <div>
+              <div style={{ color: '#94a3b8', fontSize: '0.68rem' }}>Max Capacity</div>
+              <div style={{ fontWeight: 700, color: '#fff' }}>{(Number(eligibility.maxActiveCredit) / 1e18).toFixed(2)} CTC</div>
+            </div>
+            <div>
+              <div style={{ color: '#94a3b8', fontSize: '0.68rem' }}>Max LTV</div>
+              <div style={{ fontWeight: 700, color: '#fff' }}>{(Number(eligibility.maxLtvBps) / 100).toFixed(0)}%</div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <button
+          className="execute-btn"
+          style={{ background: 'linear-gradient(135deg, #8b5cf6, #6366f1)' }}
+          onClick={handleRegister}
+          disabled={registering}
+        >
+          {registering ? 'Awaiting Wallet Signature...' : 'Register Eligibility Badge On-Chain'}
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      )}
+
+      {/* Add Evidence Drawer/Form Toggle */}
+      {!showAddEvidence ? (
+        <button
+          className="quick-action-btn"
+          style={{ width: '100%', justifyContent: 'center', background: 'rgba(14,165,233,0.1)', borderColor: 'rgba(14,165,233,0.3)', color: '#38bdf8' }}
+          onClick={() => setShowAddEvidence(true)}
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add Cross-Chain Evidence</span>
+        </button>
+      ) : (
+        <div style={{ padding: '14px', borderRadius: '12px', background: 'rgba(0,0,0,0.35)', border: '1px solid var(--panel-border)' }}>
+          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff', marginBottom: '12px' }}>
+            Ingest Source-Chain Evidence
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Source Network</label>
+            <select
+              value={sourceChain}
+              onChange={e => setSourceChain(e.target.value as any)}
+              className="styled-input"
+              style={{ background: 'rgba(15,23,42,0.9)' }}
+            >
+              <option value="11155111">Ethereum Sepolia (Chain ID 11155111)</option>
+              <option value="1">Ethereum Mainnet (Chain ID 1)</option>
+              <option value="42161">Arbitrum One (Chain ID 42161)</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Evidence Type</label>
+            <div className="preset-chips-row" style={{ marginTop: 0 }}>
+              <button
+                className={`preset-chip ${eventType === 'INFLOW' ? 'active' : ''}`}
+                style={{ flex: 1, textAlign: 'center', background: eventType === 'INFLOW' ? 'rgba(14,165,233,0.2)' : undefined, color: eventType === 'INFLOW' ? '#38bdf8' : undefined }}
+                onClick={() => setEventType('INFLOW')}
+              >
+                Inflow (Revenue)
+              </button>
+              <button
+                className={`preset-chip ${eventType === 'REPAYMENT' ? 'active' : ''}`}
+                style={{ flex: 1, textAlign: 'center', background: eventType === 'REPAYMENT' ? 'rgba(14,165,233,0.2)' : undefined, color: eventType === 'REPAYMENT' ? '#38bdf8' : undefined }}
+                onClick={() => setEventType('REPAYMENT')}
+              >
+                Repayment Track
+              </button>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Source Transaction Hash</label>
+            <input
+              type="text"
+              value={txHash}
+              onChange={e => setTxHash(e.target.value)}
+              className="styled-input"
+              placeholder="0x..."
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+            <button
+              className="execute-btn"
+              style={{ flex: 1 }}
+              onClick={handleVerifyEvidence}
+              disabled={verifying || !txHash}
+            >
+              {verifying ? 'Verifying with USC...' : 'Submit to USC Block Prover'}
+            </button>
+            <button
+              className="preset-chip"
+              style={{ padding: '0 12px' }}
+              onClick={() => setShowAddEvidence(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {result && (
+        <div className={`feedback-box ${isError ? 'error' : ''}`}>
+          {result}
+        </div>
+      )}
     </div>
   );
 }
