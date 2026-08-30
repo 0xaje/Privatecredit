@@ -1,12 +1,12 @@
+import 'dotenv/config';
 import { ethers } from 'ethers';
 
-const CREDITCOIN_RPC_URL = 'https://rpc.cc3-testnet.creditcoin.network';
+const CREDITCOIN_RPC_URL = process.env.CREDITCOIN_RPC_URL || 'https://rpc.cc3-testnet.creditcoin.network';
 const EXPECTED_CHAIN_ID = 102031n;
-const EXPECTED_SIGNER = '0xD29CC27f6D1545158a935EC97001ab3967FA4ee1';
-const USC_VERIFIER_ADDRESS = '0xFE502a51765a219b76a4Ed3Ba7899c43436e4399';
-const EXPECTED_SOURCE_CHAIN_ID = 11155111n;
-const EXPECTED_SOURCE_CHAIN_KEY = 1n;
-const EXPECTED_SOURCE_TOKEN = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
+const USC_VERIFIER_ADDRESS = process.env.USC_VERIFIER_ADDR || '0xFE502a51765a219b76a4Ed3Ba7899c43436e4399';
+const EXPECTED_SOURCE_CHAIN_ID = BigInt(process.env.SOURCE_CHAIN_ID || '11155111');
+const EXPECTED_SOURCE_CHAIN_KEY = BigInt(process.env.SOURCE_CHAIN_KEY || '1');
+const EXPECTED_SOURCE_TOKEN = process.env.SOURCE_TOKEN_ADDRESS || '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
 
 const USC_VERIFIER_ABI = [
   'function owner() view returns (address)',
@@ -19,7 +19,7 @@ const USC_VERIFIER_ABI = [
 
 const privateKey = process.env.DEPLOYER_PRIVATE_KEY;
 if (!privateKey) {
-  throw new Error('DEPLOYER_PRIVATE_KEY is required as a runtime secret.');
+  throw new Error('DEPLOYER_PRIVATE_KEY is required in your .env file.');
 }
 
 const provider = new ethers.JsonRpcProvider(CREDITCOIN_RPC_URL);
@@ -36,10 +36,6 @@ try {
 }
 
 const signerAddress = ethers.getAddress(signer.address);
-if (signerAddress !== ethers.getAddress(EXPECTED_SIGNER)) {
-  throw new Error(`Wrong signer: expected ${EXPECTED_SIGNER}, got ${signerAddress}.`);
-}
-
 const verifierAddress = ethers.getAddress(USC_VERIFIER_ADDRESS);
 const sourceTokenAddress = ethers.getAddress(EXPECTED_SOURCE_TOKEN);
 const bytecode = await provider.getCode(verifierAddress);

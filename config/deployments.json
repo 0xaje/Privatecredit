@@ -4,14 +4,15 @@
   "rpcUrl": "https://rpc.cc3-testnet.creditcoin.network",
   "explorerUrl": "https://creditcoin.blockscout.com",
   "contracts": {
-    "artefactRegistry": "0x1D70b72Ad254535624F1f83d3DAf845416777B2F",
-    "eligibilityRegistry": "0x71777Ef0194E36C0eE5d17432D029ED052cBcAE2",
-    "repaymentRegistry": "0x501FeEc3DB2Cbc612FD76E9E687Bf414d84884EC",
-    "capacityManager": "0x4f55B2668e74d7AB350b7d105aAc8b914B9aEDBc",
-    "loanVault": "0x2773338984c5036374E02496848335C24cBd975b",
-    "loanMarketplace": "0x776645cD81Ab903c573De406615A2f4c429ca9cc",
-    "debtAuctionManager": "",
-    "uscVerifier": ""
+    "artefactRegistry": "0x4DbBd27F6e557860564bD1aa8e0596d62a2735C4",
+    "eligibilityRegistry": "0xd106C554567470b5a8a0894b3A210D175d4fD7BA",
+    "repaymentRegistry": "0xa2DBeB94c0a151e071A6c29999FE1c6B38217b85",
+    "capacityManager": "0xBDCd79e468a05BaD60cc0822Df42c11B4e0E4f3D",
+    "loanVault": "0x84e16815CfA7FacABac6678eC1B0CdE5Fc52B5AF",
+    "loanMarketplace": "0xDEf64f40AfFeFD2182148cdFCeF8DAf81EC99C9a",
+    "debtAuctionManager": "0x33526D6AF4d1A7c925274dA542Eb2b06eE342b72",
+    "uscVerifier": "0x6c35e07Ca0E0234220145F33f8Bedb41eFde45b6",
+    "evmV1Decoder": "0x70BD41c4A9E7c849337549CD6EEb71266f2Ddd96"
   },
   "attestcoin": {
     "blockProverPrecompile": "0x0000000000000000000000000000000000000FD2",
