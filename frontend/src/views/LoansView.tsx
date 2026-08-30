@@ -20,6 +20,7 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
   const [deskTab, setDeskTab] = useState<'borrow' | 'lender' | 'repay' | 'auctions'>('borrow');
   const [capacity, setCapacity] = useState<{ available: string; used: string; locked: string } | null>(null);
   const [auctions, setAuctions] = useState<any[]>([]);
+  const [openRequests, setOpenRequests] = useState<any[]>([]);
 
   // Borrow Form (Formatted human units)
   const [borrowAmountCTC, setBorrowAmountCTC] = useState<string>('1.0');
@@ -28,15 +29,15 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
   const collateralPct = 20; // 20% collateral required for Tier 1
 
   // Lender Offer Form
-  const [targetRequestId, setTargetRequestId] = useState<string>('1');
-  const [offerPrincipalCTC, setOfferPrincipalCTC] = useState<string>('1.0');
-  const [offerAprPct, setOfferAprPct] = useState<number>(8.0);
+  const [targetRequestId, setTargetRequestId] = useState<string>('2');
+  const [offerPrincipalCTC, setOfferPrincipalCTC] = useState<string>('50.0');
+  const [offerAprPct, setOfferAprPct] = useState<number>(9.5);
   const offerDurationDays = 30;
-  const [offerCollateralCTC, setOfferCollateralCTC] = useState<string>('0.2');
+  const [offerCollateralCTC, setOfferCollateralCTC] = useState<string>('17.5');
 
   // Repayment Form
   const [repayLoanId, setRepayLoanId] = useState<string>('1');
-  const [repayAmountCTC, setRepayAmountCTC] = useState<string>('1.02');
+  const [repayAmountCTC, setRepayAmountCTC] = useState<string>('20.15');
 
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -54,6 +55,9 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
     api.getAuctions()
       .then(res => setAuctions(res.auctions || []))
       .catch(() => setAuctions([]));
+    api.getOpenRequests()
+      .then(res => setOpenRequests(res.requests || []))
+      .catch(() => setOpenRequests([]));
   }, [activeAddress]);
 
   useEffect(() => {
@@ -294,6 +298,48 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
       {/* ─── 2. LENDER DESK ─── */}
       {deskTab === 'lender' && (
         <div>
+          {openRequests.length > 0 && (
+            <div style={{ marginBottom: '16px' }}>
+              <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>Open Borrow Requests on Marketplace</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {openRequests.map((req: any) => {
+                  const amountCTC = formatUnits(req.amount, 18);
+                  const collateralCTC = formatUnits(req.collateralAmount, 18);
+                  const maxApr = Number(req.maxAprBps) / 100;
+                  const isSelected = targetRequestId === req.requestId;
+
+                  return (
+                    <div
+                      key={req.requestId}
+                      onClick={() => {
+                        setTargetRequestId(req.requestId);
+                        setOfferPrincipalCTC(amountCTC);
+                        setOfferAprPct(maxApr);
+                        setOfferCollateralCTC(collateralCTC);
+                      }}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        background: isSelected ? 'rgba(14, 165, 233, 0.15)' : 'rgba(15, 23, 42, 0.6)',
+                        border: isSelected ? '1px solid #0ea5e9' : '1px solid rgba(255,255,255,0.08)',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontWeight: 700, color: '#f8fafc', fontSize: '0.85rem' }}>Request #{req.requestId}</span>
+                        <span style={{ color: '#38bdf8', fontWeight: 600, fontSize: '0.82rem' }}>{amountCTC} CTC</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#94a3b8' }}>
+                        <span>Max APR: {maxApr}%</span>
+                        <span>Collateral: {Number(collateralCTC).toFixed(2)} CTC</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div className="form-group">
             <div className="form-label-row">
               <label className="form-label">Target Borrow Request ID</label>

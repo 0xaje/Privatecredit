@@ -30,6 +30,7 @@ const addresses = {
   capacityManager: process.env.CAPACITY_MANAGER_ADDR || deployment.contracts.capacityManager,
   loanVault: process.env.LOAN_VAULT_ADDR || deployment.contracts.loanVault,
   loanMarketplace: process.env.MARKETPLACE_ADDR || deployment.contracts.loanMarketplace,
+  debtAuctionManager: process.env.DEBT_AUCTION_MANAGER_ADDR || deployment.contracts.debtAuctionManager,
   uscVerifier: process.env.USC_VERIFIER_ADDR || deployment.contracts.uscVerifier,
 };
 

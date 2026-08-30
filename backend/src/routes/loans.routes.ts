@@ -9,7 +9,8 @@ const MARKETPLACE_ABI = [
   'function createBorrowRequest(uint256 amount, uint256 maxAprBps, uint256 maxDuration, uint256 collateralAmount) external returns (uint256)',
   'function createLenderOffer(uint256 requestId, uint256 aprBps, uint256 duration, uint256 requiredCollateral) external payable returns (uint256)',
   'function acceptOffer(uint256 offerId) external payable',
-  'function getOpenRequests() external view returns (tuple(uint256 requestId,address borrower,uint256 amount,uint256 maxAprBps,uint256 maxDuration,uint256 collateralAmount,uint8 status,uint256 createdAt)[])',
+  'function nextRequestId() external view returns (uint256)',
+  'function requests(uint256 requestId) external view returns (tuple(uint256 requestId,address borrower,uint256 amount,uint256 maxAprBps,uint256 maxDuration,uint256 collateralAmount,uint8 status,uint256 createdAt))',
   'event RequestCreated(uint256 indexed requestId, address indexed borrower, uint256 amount)',
   'event OfferCreated(uint256 indexed offerId, uint256 indexed requestId, address indexed lender)',
   'event OfferAccepted(uint256 indexed offerId, uint256 indexed requestId)',
@@ -119,17 +120,25 @@ loansRouter.post('/prepare/repay', (req: Request, res: Response) => {
 loansRouter.get('/requests/open', async (_req: Request, res: Response) => {
   try {
     const contract = new ethers.Contract(config.addresses.loanMarketplace, MARKETPLACE_ABI, provider);
-    const requests = await contract.getOpenRequests();
-    res.json({ success: true, requests: requests.map((request: any) => ({
-      requestId: request.requestId.toString(),
-      borrower: request.borrower,
-      amount: request.amount.toString(),
-      maxAprBps: request.maxAprBps.toString(),
-      maxDuration: request.maxDuration.toString(),
-      collateralAmount: request.collateralAmount.toString(),
-      status: Number(request.status),
-      createdAt: request.createdAt.toString(),
-    })) });
+    const nextReqId = await contract.nextRequestId();
+    const count = Number(nextReqId);
+    const openRequests = [];
+    for (let i = 1; i < count; i++) {
+      const req = await contract.requests(i);
+      if (Number(req.status) === 0) { // 0 = OPEN
+        openRequests.push({
+          requestId: req.requestId.toString(),
+          borrower: req.borrower,
+          amount: req.amount.toString(),
+          maxAprBps: req.maxAprBps.toString(),
+          maxDuration: req.maxDuration.toString(),
+          collateralAmount: req.collateralAmount.toString(),
+          status: Number(req.status),
+          createdAt: req.createdAt.toString(),
+        });
+      }
+    }
+    res.json({ success: true, requests: openRequests });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

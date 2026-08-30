@@ -1,14 +1,60 @@
 import { Router, Request, Response } from 'express';
+import { ethers } from 'ethers';
+import { config } from '../config';
 import { database } from '../services/Database';
 import { graphStore } from '../services/GraphStore';
 import { eventStream } from '../services/EventStream';
 
+const DEBT_AUCTION_ABI = [
+  'function nextAuctionId() external view returns (uint256)',
+  'function getAuction(uint256 auctionId) external view returns (tuple(uint256 auctionId,uint256 loanId,address borrower,address lender,uint256 principal,uint256 collateralAmount,uint256 reservePrice,uint256 highestBid,address highestBidder,uint256 startTime,uint256 endTime,uint8 status))',
+];
+
+const provider = new ethers.JsonRpcProvider(config.rpcUrl);
+
 export const auctionsRouter = Router();
 
-// GET /api/auctions - list all auctions
-auctionsRouter.get('/', (_req: Request, res: Response) => {
-  const auctions = database.getAllAuctions();
-  res.json({ auctions });
+// GET /api/auctions - list all auctions (database + on-chain)
+auctionsRouter.get('/', async (_req: Request, res: Response) => {
+  try {
+    const dbAuctions = database.getAllAuctions();
+    const onChainAuctions: any[] = [];
+
+    if (config.addresses.debtAuctionManager && config.addresses.debtAuctionManager !== ethers.ZeroAddress) {
+      try {
+        const contract = new ethers.Contract(config.addresses.debtAuctionManager, DEBT_AUCTION_ABI, provider);
+        const nextId = await contract.nextAuctionId();
+        const count = Number(nextId);
+        for (let i = 1; i < count; i++) {
+          const a = await contract.getAuction(i);
+          if (Number(a.status) === 1) { // 1 = ACTIVE
+            onChainAuctions.push({
+              id: `onchain_auction_${a.auctionId.toString()}`,
+              auctionId: a.auctionId.toString(),
+              loanId: a.loanId.toString(),
+              borrower: a.borrower,
+              lender: a.lender,
+              principal: a.principal.toString(),
+              collateralAmount: a.collateralAmount.toString(),
+              reservePrice: a.reservePrice.toString(),
+              discountBps: 3000,
+              status: 'ACTIVE',
+              startTime: a.startTime.toString(),
+              endTime: a.endTime.toString(),
+              highestBid: a.highestBid > 0n ? a.highestBid.toString() : null,
+              highestBidder: a.highestBidder !== ethers.ZeroAddress ? a.highestBidder : null,
+            });
+          }
+        }
+      } catch (err: any) {
+        console.warn('Could not fetch on-chain auctions:', err.message);
+      }
+    }
+
+    res.json({ auctions: [...dbAuctions, ...onChainAuctions] });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // POST /api/auctions - create / register an auction for a defaulted loan
