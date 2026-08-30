@@ -72,6 +72,17 @@ export default buildModule("PrivateCreditModule", (m) => {
     { after: [authorizeLoanMarketplace] },
   );
 
+  const debtAuctionManager = m.contract("DebtAuctionManager", [loanVault], {
+    after: [setLoanVaultMarketplace],
+  });
+
+  const setLoanVaultDebtAuctionManager = m.call(
+    loanVault,
+    "setDebtAuctionManager",
+    [debtAuctionManager],
+    { after: [debtAuctionManager] },
+  );
+
   return {
     eligibilityRegistry,
     evmV1Decoder,
@@ -81,11 +92,7 @@ export default buildModule("PrivateCreditModule", (m) => {
     uscVerifier,
     loanVault,
     loanMarketplace,
-    setRegistrar,
-    authorizeLoanVault,
-    setLoanVaultRepaymentRegistry,
-    setAuthorizedRecorder,
-    authorizeLoanMarketplace,
-    setLoanVaultMarketplace,
+    debtAuctionManager,
   };
 });
+

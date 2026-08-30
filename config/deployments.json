@@ -10,6 +10,7 @@
     "capacityManager": "0x4f55B2668e74d7AB350b7d105aAc8b914B9aEDBc",
     "loanVault": "0x2773338984c5036374E02496848335C24cBd975b",
     "loanMarketplace": "0x776645cD81Ab903c573De406615A2f4c429ca9cc",
+    "debtAuctionManager": "",
     "uscVerifier": ""
   },
   "attestcoin": {

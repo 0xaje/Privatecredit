@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import { deployment, useCreditcoinWallet } from '../wallet';
 import { Gavel, DollarSign, ArrowUpRight, CheckCircle2, Zap } from 'lucide-react';
@@ -45,7 +45,7 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
   const { address, isConnected, send } = useCreditcoinWallet();
   const activeAddress = address || borrowerAddress;
 
-  const loadData = () => {
+  const loadData = useCallback(() => {
     if (activeAddress) {
       api.getCapacity(activeAddress)
         .then(res => setCapacity({ available: res.availableCapacity, used: res.usedCapacity, locked: res.defaultedLockedCapacity || '0' }))
@@ -54,7 +54,7 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
     api.getAuctions()
       .then(res => setAuctions(res.auctions || []))
       .catch(() => setAuctions([]));
-  };
+  }, [activeAddress]);
 
   useEffect(() => {
     loadData();
@@ -63,7 +63,7 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
       onLoanAction();
     });
     return () => unsubscribe();
-  }, [activeAddress, onLoanAction]);
+  }, [loadData, onLoanAction]);
 
   const availNum = capacity ? Number(formatUnits(capacity.available, 18)) : 0;
   const usedNum = capacity ? Number(formatUnits(capacity.used, 18)) : 0;

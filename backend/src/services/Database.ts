@@ -1,6 +1,22 @@
 import fs from 'fs';
 import path from 'path';
 
+export interface IDatabaseAdapter {
+  getNode(id: string): any | undefined;
+  getAllNodes(): any[];
+  setNode(id: string, node: any): void;
+  deleteNode(id: string): boolean;
+  getEdge(id: string): any | undefined;
+  getAllEdges(): any[];
+  setEdge(id: string, edge: any): void;
+  getAuction(id: string): any | undefined;
+  getAllAuctions(): any[];
+  setAuction(id: string, auction: any): void;
+  recordAuditEvent(eventType: string, actor: string, details: Record<string, any>): void;
+  getAuditEvents(): any[];
+  flushSync(): void;
+}
+
 export interface DatabaseSchema {
   nodes: Record<string, any>;
   edges: Record<string, any>;

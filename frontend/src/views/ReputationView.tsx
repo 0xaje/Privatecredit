@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import { useCreditcoinWallet } from '../wallet';
 import { ShieldCheck, ArrowRight, Award, Plus } from 'lucide-react';
@@ -26,12 +26,12 @@ export default function ReputationView({ borrowerAddress, evidenceNodeIds, onEli
   const { getSigner, address } = useCreditcoinWallet();
   const activeAddress = address || borrowerAddress;
 
-  const loadEligibility = () => {
+  const loadEligibility = useCallback(() => {
     if (!activeAddress) return;
     api.getEligibility(activeAddress)
       .then(res => setEligibility(res.eligibility))
       .catch(() => setEligibility(null));
-  };
+  }, [activeAddress]);
 
   useEffect(() => {
     loadEligibility();
@@ -42,7 +42,7 @@ export default function ReputationView({ borrowerAddress, evidenceNodeIds, onEli
     api.previewScore(activeAddress, evidenceNodeIds)
       .then(res => setPreview(res.policy))
       .catch(err => setResult(err.message));
-  }, [activeAddress, evidenceNodeIds]);
+  }, [activeAddress, evidenceNodeIds, loadEligibility]);
 
   const handleVerifyEvidence = async () => {
     if (!activeAddress || !txHash) return;

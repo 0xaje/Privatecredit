@@ -1,29 +1,7 @@
-import { createContext, useContext, useMemo, useCallback, type ReactNode } from 'react';
+import { useMemo, useCallback, type ReactNode } from 'react';
 import { useAccount, useChainId, useDisconnect, useWalletClient } from 'wagmi';
 import { BrowserProvider, Contract, type ContractTransactionResponse, type Signer } from 'ethers';
-import deploymentManifest from '../../config/privatecredit-cc3-live-v3.json';
-
-export const deployment = {
-  ...deploymentManifest,
-  contracts: {
-    ...deploymentManifest.contracts,
-    uscVerifier: import.meta.env.VITE_USC_VERIFIER_ADDRESS || deploymentManifest.contracts.uscVerifier,
-  },
-};
-
-interface WalletContextType {
-  address: string;
-  isConnected: boolean;
-  isConnecting: boolean;
-  chainId: number | null;
-  error: string | null;
-  connect: () => Promise<void>;
-  disconnect: () => Promise<void>;
-  getSigner: () => Promise<Signer>;
-  send: (contractAddress: string, abi: any[], method: string, args: any[], value?: string) => Promise<ContractTransactionResponse>;
-}
-
-const WalletContext = createContext<WalletContextType | null>(null);
+import { WalletContext, type WalletContextType } from './walletContext';
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const { address, isConnected, isConnecting } = useAccount();
@@ -86,12 +64,4 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       {children}
     </WalletContext.Provider>
   );
-}
-
-export function useCreditcoinWallet() {
-  const context = useContext(WalletContext);
-  if (!context) {
-    throw new Error('useCreditcoinWallet must be used within a WalletProvider');
-  }
-  return context;
 }
