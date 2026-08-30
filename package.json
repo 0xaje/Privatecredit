@@ -11,7 +11,8 @@
     "validate:ignition": "hardhat --build-profile production ignition deploy ignition/modules/PrivateCredit.ts --network hardhatMainnet --deployment-id privatecredit-cc3-live-v3",
     "deploy:local": "hardhat ignition deploy ignition/modules/PrivateCredit.ts --network localhost",
     "deploy:testnet": "node scripts/deploy-testnet.mjs",
-    "configure:usc": "node scripts/configure-usc-verifier.mjs"
+    "configure:usc": "node scripts/configure-usc-verifier.mjs",
+    "seed:demo": "node scripts/seed-demo.mjs"
   },
   "keywords": [],
   "author": "",
