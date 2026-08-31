@@ -4,10 +4,10 @@ import { graphStore } from '../services/GraphStore';
 export const graphRouter = Router();
 
 // Get the full graph for a borrower
-graphRouter.get('/:borrower', (req: Request, res: Response) => {
+graphRouter.get('/:borrower', async (req: Request, res: Response) => {
     try {
         const borrower = req.params.borrower as string;
-        const graph = graphStore.getGraphForBorrower(borrower);
+        const graph = await graphStore.getGraphForBorrower(borrower);
         res.json(graph);
     } catch (e: any) {
         res.status(500).json({ error: e.message });
