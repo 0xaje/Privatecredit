@@ -46,7 +46,7 @@ export const sepoliaChain = defineChain({
 });
 
 // 3. Configure RainbowKit connectors
-const projectId = import.meta.env.VITE_REOWN_PROJECT_ID || 'c4f79cc821944d9680842e34466bfb';
+const projectId = import.meta.env.VITE_REOWN_PROJECT_ID || 'f48fe59199efaacbea4b7681b65ac159';
 
 const connectors = connectorsForWallets(
   [
