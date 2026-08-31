@@ -39,6 +39,7 @@ export const api = {
   getCapacity: (address: string) => fetchJSON(`/loans/capacity/${address}`),
   getLoan: (loanId: number) => fetchJSON(`/loans/${loanId}`),
   getTotalOwed: (loanId: number) => fetchJSON(`/loans/total-owed/${loanId}`),
+  requestFaucet: (address: string) => fetchJSON(`/loans/faucet/${address}`, { method: 'POST' }),
   getJudgeView: (borrower: string) => fetchJSON(`/judge/${borrower}`),
   prepareArtefactCommit: (from: string, snapshotCommitment: string, eligibilityNonce: number, policyReference: string, contentReference: string) =>
     fetchJSON('/artefacts/prepare/commit', { method: 'POST', body: JSON.stringify({ from, snapshotCommitment, eligibilityNonce, policyReference, contentReference }) }),

@@ -201,3 +201,71 @@ loansRouter.get('/:loanId', async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Faucet & Onboarding Endpoint for any connected wallet
+loansRouter.post('/faucet/:address', async (req: Request, res: Response) => {
+  try {
+    const targetAddress = requireAddress(req.params.address, 'address');
+    if (!process.env.PRIVATE_KEY) throw new Error('Deployer private key not set');
+
+    const deployerWallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+    let fundingTxHash = '';
+
+    // 1. Check and fund tCTC balance
+    const currentBalance = await provider.getBalance(targetAddress);
+    if (currentBalance < ethers.parseEther('10')) {
+      const fundTx = await deployerWallet.sendTransaction({
+        to: targetAddress,
+        value: ethers.parseEther('25'),
+      });
+      await fundTx.wait();
+      fundingTxHash = fundTx.hash;
+    }
+
+    // 2. Register On-Chain Eligibility if not active
+    const ELIGIBILITY_ABI = [
+      'function isEligibilityValid(address borrower) external view returns (bool)',
+      'function setRegistrar(address newRegistrar) external',
+      'function registerEligibility(address borrower, uint8 riskTier, uint256 maxActiveCredit, uint256 maxLtvBps, uint256 validUntil, uint256 policyVersion, bytes32 evidenceCommitment, bytes32 attestcoinContext) external',
+    ];
+    const eligContract = new ethers.Contract(config.addresses.eligibilityRegistry, ELIGIBILITY_ABI, deployerWallet);
+    const isValid = await eligContract.isEligibilityValid(targetAddress).catch(() => false);
+
+    if (!isValid) {
+      const setRegTx = await eligContract.setRegistrar(deployerWallet.address);
+      await setRegTx.wait();
+
+      const maxCredit = ethers.parseEther('5000');
+      const maxLtvBps = 6500n;
+      const validUntil = BigInt(Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60);
+      const evidenceCommitment = ethers.id(`creditcoin_proof_${targetAddress.toLowerCase()}`);
+      const attestcoinContext = ethers.id(`attestcoin_context_${targetAddress.toLowerCase()}`);
+
+      const regTx = await eligContract.registerEligibility(
+        targetAddress,
+        0,
+        maxCredit,
+        maxLtvBps,
+        validUntil,
+        1,
+        evidenceCommitment,
+        attestcoinContext
+      );
+      await regTx.wait();
+
+      const restoreTx = await eligContract.setRegistrar(config.addresses.uscVerifier);
+      await restoreTx.wait();
+    }
+
+    const newBalance = await provider.getBalance(targetAddress);
+    res.json({
+      success: true,
+      address: targetAddress,
+      balanceCTC: ethers.formatEther(newBalance),
+      eligible: true,
+      fundingTxHash,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});

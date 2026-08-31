@@ -169,6 +169,26 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
     }
   };
 
+  const [claiming, setClaiming] = useState(false);
+
+  const handleFaucetClaim = async () => {
+    if (!activeAddress) return;
+    setClaiming(true);
+    setResult(null);
+    setIsError(false);
+    try {
+      await api.requestFaucet(activeAddress);
+      setResult('Onboarding complete! 25 tCTC claimed & Tier 1 (AAA) 5,000 CTC capacity registered on-chain.');
+      loadData();
+      onLoanAction();
+    } catch (err: any) {
+      setIsError(true);
+      setResult(`Onboarding failed: ${err.message}`);
+    } finally {
+      setClaiming(false);
+    }
+  };
+
   const selectedRequest = openRequests.find((r: any) => String(r.requestId) === String(targetRequestId));
   const isOwnRequest = Boolean(selectedRequest && activeAddress && selectedRequest.borrower?.toLowerCase() === activeAddress.toLowerCase());
 
@@ -180,6 +200,35 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
           <span>Credit Market & Lending Desk</span>
         </div>
       </div>
+
+      {/* 1-Click On-Chain Testnet Onboarding */}
+      {availNum <= 0 && activeAddress && (
+        <div style={{
+          padding: '12px 14px',
+          borderRadius: '12px',
+          background: 'linear-gradient(135deg, rgba(14,165,233,0.15) 0%, rgba(99,102,241,0.15) 100%)',
+          border: '1px solid rgba(14,165,233,0.3)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontWeight: 700, color: '#38bdf8', fontSize: '0.85rem' }}>🌟 New Wallet Onboarding</span>
+            <span style={{ fontSize: '0.7rem', color: '#34d399', fontWeight: 600 }}>CC3 Testnet</span>
+          </div>
+          <span style={{ fontSize: '0.76rem', color: '#cbd5e1' }}>
+            Claim 25 tCTC gas/collateral funds and register 5,000 CTC on-chain credit capacity with 1 click.
+          </span>
+          <button
+            className="execute-btn"
+            style={{ padding: '8px 12px', fontSize: '0.8rem', background: 'linear-gradient(135deg, #0ea5e9, #6366f1)' }}
+            onClick={handleFaucetClaim}
+            disabled={claiming}
+          >
+            {claiming ? 'Minting On-Chain Rating...' : 'Claim 25 tCTC & Register Credit Rating'}
+          </button>
+        </div>
+      )}
 
       {/* Subtab Switcher */}
       <div className="subtab-switcher">
