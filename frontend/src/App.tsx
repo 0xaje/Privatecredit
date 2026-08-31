@@ -24,8 +24,8 @@ import { CustomConnectButton } from './components/CustomConnectButton';
 export default function App() {
   const [activeView, setActiveView] = useState<'overview' | 'reputation' | 'loans' | 'judge'>('overview');
   const { address } = useCreditcoinWallet();
-  const [presetAddress, setPresetAddress] = useState<string>('0x71c7656ec7ab88b098defb751b7401b5f6d8976f');
-  const activeWallet = address || presetAddress;
+  const [viewAddress, setViewAddress] = useState<string | null>(null);
+  const activeWallet = address || viewAddress || '0xb096B95B923a9eE0DD63CF565E482784cCFA3dEc';
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [evidenceNodeIds, setEvidenceNodeIds] = useState<string[]>([]);
@@ -140,30 +140,32 @@ export default function App() {
             <span className="nav-tab-badge">Zero-Trust</span>
           </button>
 
-          {/* Account Profile Presets */}
+          {/* Real On-Chain Profiles */}
           <div className="account-selector-box">
-            <div className="sidebar-section-title" style={{ padding: '0 0 4px 0' }}>Demo Profiles</div>
+            <div className="sidebar-section-title" style={{ padding: '0 0 4px 0' }}>Live On-Chain Profiles</div>
             <button
-              className={`account-btn ${presetAddress === '0x71c7656ec7ab88b098defb751b7401b5f6d8976f' ? 'active' : ''}`}
-              onClick={() => setPresetAddress('0x71c7656ec7ab88b098defb751b7401b5f6d8976f')}
+              className={`account-btn ${activeWallet.toLowerCase() === '0xb096b95b923a9ee0dd63cf565e482784ccfa3dec' ? 'active' : ''}`}
+              onClick={() => setViewAddress('0xb096B95B923a9eE0DD63CF565E482784cCFA3dEc')}
             >
-              <span>Veteran Account</span>
-              <span style={{ fontSize: '0.65rem', color: '#10b981' }}>Tier 1 (AAA)</span>
+              <span>Demo Borrower (CC3)</span>
+              <span style={{ fontSize: '0.65rem', color: '#10b981' }}>0xb096...3dEc</span>
             </button>
             <button
-              className={`account-btn ${presetAddress === '0x1111111111111111111111111111111111111111' ? 'active' : ''}`}
-              onClick={() => setPresetAddress('0x1111111111111111111111111111111111111111')}
+              className={`account-btn ${activeWallet.toLowerCase() === '0xbf6301d7bca9f23a63a2d1ed513d5120dbb2288e' ? 'active' : ''}`}
+              onClick={() => setViewAddress('0xbf6301D7bca9F23A63A2d1Ed513d5120Dbb2288E')}
             >
-              <span>Standard Account</span>
-              <span style={{ fontSize: '0.65rem', color: '#38bdf8' }}>Tier 2 (AA)</span>
+              <span>Primary Lender (CC3)</span>
+              <span style={{ fontSize: '0.65rem', color: '#38bdf8' }}>0xbf63...288E</span>
             </button>
-            <button
-              className={`account-btn ${presetAddress === '0x9999999999999999999999999999999999999999' ? 'active' : ''}`}
-              onClick={() => setPresetAddress('0x9999999999999999999999999999999999999999')}
-            >
-              <span>High-Risk Account</span>
-              <span style={{ fontSize: '0.65rem', color: '#f43f5e' }}>Tier 3 (B)</span>
-            </button>
+            {address && (
+              <button
+                className={`account-btn ${activeWallet.toLowerCase() === address.toLowerCase() ? 'active' : ''}`}
+                onClick={() => setViewAddress(address)}
+              >
+                <span>Connected Wallet</span>
+                <span style={{ fontSize: '0.65rem', color: '#a855f7' }}>{address.slice(0, 6)}...{address.slice(-4)}</span>
+              </button>
+            )}
           </div>
         </div>
 

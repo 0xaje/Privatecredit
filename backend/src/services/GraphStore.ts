@@ -47,49 +47,7 @@ const VAULT_ABI = [
 const provider = new ethers.JsonRpcProvider(config.rpcUrl);
 
 export class GraphStore {
-  constructor() {
-    this.ensureInitialized();
-  }
-
-  private ensureInitialized(): void {
-    const existing = database.getAllNodes();
-    if (existing.length === 0) {
-      this.seedDefaultProfiles();
-    }
-  }
-
-  private seedDefaultProfiles(): void {
-    // 1. Whale Profile
-    const whale = '0x71c7656ec7ab88b098defb751b7401b5f6d8976f';
-    const wNodeId = `wallet_${whale}`;
-    this.addNode({ id: wNodeId, type: 'WALLET', data: { address: whale, evidenceCount: 2, eligible: true }, verified: true });
-
-    const ev1Id = `ev_whale_1`;
-    this.addNode({
-      id: ev1Id,
-      type: 'EVIDENCE',
-      data: {
-        type: 'INFLOW',
-        amount: '5000000000000000000',
-        sourceChain: 'Ethereum Sepolia',
-        sourceTxHash: '0x3aef91204859a1bc294857201948572019485720194857201948572019485720',
-        verified: true,
-        attestcoinRequestId: 'req_whale_inflow_1',
-      },
-      verified: true,
-      proofStatus: 'VERIFIED',
-    });
-    this.addEdge({ id: `edge_w1`, source: wNodeId, target: ev1Id, type: 'INFLOW_TO', verified: true });
-
-    const elWhale = `elig_whale`;
-    this.addNode({
-      id: elWhale,
-      type: 'ELIGIBILITY',
-      data: { riskTier: 0, maxActiveCredit: '10000000000000000000000', maxLtvBps: 6500, validUntil: Math.floor(Date.now() / 1000) + 2592000, policyVersion: 1 },
-      verified: true,
-    });
-    this.addEdge({ id: `edge_w3`, source: wNodeId, target: elWhale, type: 'ELIGIBILITY_FOR', verified: true });
-  }
+  constructor() {}
 
   addNode(node: GraphNode): void {
     database.setNode(node.id, node);
