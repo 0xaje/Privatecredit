@@ -10,16 +10,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { data: walletClient } = useWalletClient();
 
   const getSigner = useCallback(async (): Promise<Signer> => {
+    if (walletClient) {
+      const { account, chain, transport } = walletClient;
+      const network = {
+        chainId: chain.id,
+        name: chain.name,
+      };
+      const provider = new BrowserProvider(transport, network);
+      return provider.getSigner(account.address);
+    }
     if (typeof window !== 'undefined' && (window as any).ethereum) {
       const provider = new BrowserProvider((window as any).ethereum);
       return provider.getSigner();
     }
-    if (!walletClient) {
-      throw new Error('Connect your wallet before signing.');
-    }
-    const transport = (walletClient as any).transport;
-    const provider = new BrowserProvider(transport);
-    return provider.getSigner();
+    throw new Error('Connect your wallet before signing.');
   }, [walletClient]);
 
   const send = useCallback(async (
@@ -32,7 +36,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (!contractAddress) throw new Error('Contract address is not configured for this environment.');
     const signer = await getSigner();
     const contract = new Contract(contractAddress, abi, signer);
-    return contract[method](...args, value ? { value } : {});
+    const overrides: any = {};
+    if (value && value !== '0') {
+      overrides.value = BigInt(value);
+    }
+
+    try {
+      return await contract[method](...args, overrides);
+    } catch (err: any) {
+      // If RPC failed to coalesce error or estimate gas, fallback with explicit gas limit
+      const errMsg = err?.message || String(err);
+      if (errMsg.includes('coalesce') || errMsg.includes('estimateGas') || errMsg.includes('UNPREDICTABLE_GAS_LIMIT')) {
+        overrides.gasLimit = 600000n;
+        return await contract[method](...args, overrides);
+      }
+      throw err;
+    }
   }, [getSigner]);
 
   const connect = useCallback(async () => {

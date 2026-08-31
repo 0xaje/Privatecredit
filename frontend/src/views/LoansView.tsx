@@ -89,7 +89,17 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
       loadData();
     } catch (error: any) {
       setIsError(true);
-      setResult(error.shortMessage || error.message || 'Transaction failed');
+      let msg = error?.reason || error?.info?.error?.message || error?.data?.message || error?.shortMessage || error?.message || 'Transaction failed';
+      if (msg.includes('BorrowerCannotLend')) {
+        msg = 'Cannot fund your own borrow request. Switch to a different wallet (e.g. Deployer wallet) to act as lender.';
+      } else if (msg.includes('RequestNotOpen')) {
+        msg = 'This borrow request is no longer open.';
+      } else if (msg.includes('TermsOutOfBounds')) {
+        msg = 'Offer terms (APR, duration, or deposit amount) are out of bounds for this request.';
+      } else if (msg.includes('InsufficientEligibility')) {
+        msg = 'Borrower does not have active eligibility registered.';
+      }
+      setResult(msg);
     } finally {
       setSubmitting(false);
     }
@@ -104,10 +114,10 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
 
     return runTransaction(
       () => send(deployment.contracts.loanMarketplace, MARKETPLACE_ABI, 'createBorrowRequest', [
-        amountWei.toString(),
-        aprBps,
-        durationSeconds,
-        collateralWei.toString(),
+        amountWei,
+        BigInt(aprBps),
+        BigInt(durationSeconds),
+        collateralWei,
       ]),
       'Borrow Request'
     );
@@ -122,10 +132,10 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
 
     return runTransaction(
       () => send(deployment.contracts.loanMarketplace, MARKETPLACE_ABI, 'createLenderOffer', [
-        Number(targetRequestId),
-        aprBps,
-        durationSeconds,
-        reqCollateralWei.toString(),
+        BigInt(targetRequestId),
+        BigInt(aprBps),
+        BigInt(durationSeconds),
+        reqCollateralWei,
       ], principalWei.toString()),
       'Funded Lender Offer'
     );
@@ -135,7 +145,7 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
   const handleRepaySubmit = () => {
     const repayWei = parseEther(repayAmountCTC || '0');
     return runTransaction(
-      () => send(deployment.contracts.loanVault, VAULT_ABI, 'repayLoan', [Number(repayLoanId)], repayWei.toString()),
+      () => send(deployment.contracts.loanVault, VAULT_ABI, 'repayLoan', [BigInt(repayLoanId)], repayWei.toString()),
       'Loan Repayment'
     );
   };
