@@ -241,7 +241,7 @@ export default function App() {
       </aside>
 
       {/* ═══════════════ CENTER INTERACTIVE STAGE ═══════════════ */}
-      <main className="center-stage">
+      <main className={`center-stage ${activeView !== 'overview' ? 'mobile-hide' : ''}`}>
         {/* Floating Top Canvas HUD */}
         <div className="canvas-floating-hud">
           <div className="hud-glass-card">
@@ -279,7 +279,7 @@ export default function App() {
       </main>
 
       {/* ═══════════════ RIGHT WORKSPACE CONSOLE ═══════════════ */}
-      <aside className="right-workspace">
+      <aside className={`right-workspace ${activeView === 'overview' ? 'mobile-hide-workspace' : ''}`}>
         {activeView === 'overview' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div className="workspace-header">
