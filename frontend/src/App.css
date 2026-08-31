@@ -880,6 +880,11 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ═══════════════ MOBILE TAB NAVIGATION BAR ═══════════════ */
+.mobile-nav-bar {
+  display: none;
+}
+
 /* ═══════════════ RESPONSIVE MEDIA QUERIES ═══════════════ */
 @media (max-width: 1200px) {
   .app-container {
@@ -889,12 +894,12 @@ body {
 
 @media (max-width: 992px) {
   .app-container {
-    grid-template-rows: 64px auto auto 40px;
+    grid-template-rows: 60px 48px 1fr 40px;
     grid-template-columns: 1fr;
     grid-template-areas:
       "nav"
+      "mobnav"
       "workspace"
-      "canvas"
       "footer";
     height: auto;
     min-height: 100vh;
@@ -902,7 +907,51 @@ body {
   }
 
   body {
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .top-center-telemetry {
+    display: none;
+  }
+
+  .mobile-nav-bar {
+    grid-area: mobnav;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    background: rgba(13, 17, 28, 0.95);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--panel-border);
+    padding: 0 8px;
+    z-index: 45;
+  }
+
+  .mobile-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .mobile-nav-btn.active {
+    background: rgba(14, 165, 233, 0.15);
+    border-color: rgba(14, 165, 233, 0.4);
+    color: var(--accent-cyan);
+  }
+
+  .mobile-nav-btn.profile-toggle {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: var(--accent-emerald);
   }
 
   .left-sidebar {
@@ -910,11 +959,46 @@ body {
   }
 
   .center-stage {
-    min-height: 500px;
+    min-height: 480px;
+    height: 55vh;
   }
 
   .right-workspace {
     border-left: none;
-    border-bottom: 1px solid var(--panel-border);
+    border-top: 1px solid var(--panel-border);
+    padding: 16px;
+  }
+
+  .floating-action-bar {
+    bottom: 12px;
+    gap: 8px;
+  }
+
+  .quick-action-btn {
+    padding: 8px 12px;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .top-nav {
+    padding: 0 12px;
+  }
+
+  .logo-text {
+    font-size: 0.95rem;
+  }
+
+  .logo-sub {
+    font-size: 0.58rem;
+  }
+
+  .mobile-nav-btn span {
+    font-size: 0.7rem;
+  }
+
+  .mobile-nav-btn {
+    padding: 5px 6px;
+    gap: 3px;
   }
 }

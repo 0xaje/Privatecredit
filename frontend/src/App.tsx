@@ -101,6 +101,59 @@ export default function App() {
         <CustomConnectButton />
       </header>
 
+      {/* ═══════════════ MOBILE TAB NAVIGATION BAR ═══════════════ */}
+      <nav className="mobile-nav-bar">
+        <button
+          className={`mobile-nav-btn ${activeView === 'overview' ? 'active' : ''}`}
+          onClick={() => setActiveView('overview')}
+        >
+          <LayoutDashboard className="w-4 h-4" />
+          <span>Graph</span>
+        </button>
+        <button
+          className={`mobile-nav-btn ${activeView === 'reputation' ? 'active' : ''}`}
+          onClick={() => setActiveView('reputation')}
+        >
+          <ShieldCheck className="w-4 h-4" />
+          <span>Reputation</span>
+        </button>
+        <button
+          className={`mobile-nav-btn ${activeView === 'loans' ? 'active' : ''}`}
+          onClick={() => setActiveView('loans')}
+        >
+          <Zap className="w-4 h-4" />
+          <span>Loans</span>
+        </button>
+        <button
+          className={`mobile-nav-btn ${activeView === 'judge' ? 'active' : ''}`}
+          onClick={() => setActiveView('judge')}
+        >
+          <Scale className="w-4 h-4" />
+          <span>Auditor</span>
+        </button>
+        <button
+          className="mobile-nav-btn profile-toggle"
+          onClick={() => {
+            if (activeWallet.toLowerCase() === '0xb096b95b923a9ee0dd63cf565e482784ccfa3dec') {
+              setViewAddress('0xbf6301D7bca9F23A63A2d1Ed513d5120Dbb2288E');
+            } else if (address && activeWallet.toLowerCase() === '0xbf6301d7bca9f23a63a2d1ed513d5120dbb2288e') {
+              setViewAddress(address);
+            } else {
+              setViewAddress('0xb096B95B923a9eE0DD63CF565E482784cCFA3dEc');
+            }
+          }}
+        >
+          <Layers className="w-4 h-4 text-emerald-400" />
+          <span>
+            {activeWallet.toLowerCase() === '0xbf6301d7bca9f23a63a2d1ed513d5120dbb2288e'
+              ? 'Lender'
+              : address && activeWallet.toLowerCase() === address.toLowerCase()
+              ? 'Wallet'
+              : 'Borrower'}
+          </span>
+        </button>
+      </nav>
+
       {/* ═══════════════ LEFT SIDEBAR ═══════════════ */}
       <aside className="left-sidebar">
         <div className="sidebar-nav-group">

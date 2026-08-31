@@ -1,6 +1,13 @@
 # PrivateCredit Graph
 
-> **Creditcoin CC3 Testnet Hackathon Submission**  
+[![Live dApp App](https://img.shields.io/badge/Live_dApp-privatecredit--beige.vercel.app-0ea5e9?style=for-the-badge&logo=vercel)](https://privatecredit-beige.vercel.app/)
+[![Render API Backend](https://img.shields.io/badge/Backend_API-privatecredit.onrender.com-10b981?style=for-the-badge&logo=render)](https://privatecredit.onrender.com/health)
+[![Network](https://img.shields.io/badge/Creditcoin_CC3-Chain_102031-8b5cf6?style=for-the-badge)](https://creditcoin.blockscout.com)
+[![USC Precompile](https://img.shields.io/badge/USC_Precompile-0x0FD2_Active-3b82f6?style=for-the-badge)](https://creditcoin.blockscout.com)
+
+> **Creditcoin CC3 Testnet Hackathon Official Submission**  
+> **Official Web dApp**: [https://privatecredit-beige.vercel.app/](https://privatecredit-beige.vercel.app/)  
+> **Live API Gateway**: [https://privatecredit.onrender.com](https://privatecredit.onrender.com)  
 > Autonomous Cross-Chain Credit Underwriting & Peer-to-Peer Lending Marketplace built natively for **Creditcoin CC3 Testnet** (`Chain ID 102031`), powered by **Attestcoin Universal Smart Contracts (USC)** and Creditcoin's native `0x0FD2` BlockProver precompile.
 
 ---
