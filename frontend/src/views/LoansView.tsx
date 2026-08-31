@@ -169,6 +169,9 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
     }
   };
 
+  const selectedRequest = openRequests.find((r: any) => String(r.requestId) === String(targetRequestId));
+  const isOwnRequest = Boolean(selectedRequest && activeAddress && selectedRequest.borrower?.toLowerCase() === activeAddress.toLowerCase());
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div className="workspace-header">
@@ -415,13 +418,31 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
             </div>
           </div>
 
+          {selectedRequest && isOwnRequest && (
+            <div style={{
+              padding: '10px 14px',
+              borderRadius: '10px',
+              background: 'rgba(245, 158, 11, 0.12)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              color: '#fde68a',
+              fontSize: '0.78rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+            }}>
+              <span style={{ fontWeight: 700, color: '#f59e0b' }}>⚠️ Self-Funding Prevented by Protocol</span>
+              <span>Your connected wallet ({activeAddress.slice(0, 6)}...{activeAddress.slice(-4)}) is the borrower of Request #{targetRequestId}. Smart contracts prohibit a borrower from lending to themselves.</span>
+              <span style={{ color: '#cbd5e1', marginTop: '2px' }}>💡 Switch accounts in MetaMask to act as the Lender.</span>
+            </div>
+          )}
+
           <button
             className="execute-btn"
-            style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
+            style={{ background: isOwnRequest ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #10b981, #059669)' }}
             onClick={handleLenderOfferSubmit}
-            disabled={submitting || Number(offerPrincipalCTC) <= 0}
+            disabled={submitting || Number(offerPrincipalCTC) <= 0 || isOwnRequest}
           >
-            {submitting ? 'Awaiting Signature...' : 'Deposit & Fund Offer'}
+            {submitting ? 'Awaiting Signature...' : isOwnRequest ? 'Cannot Fund Own Request' : 'Deposit & Fund Offer'}
             <DollarSign className="w-4 h-4" />
           </button>
         </div>
