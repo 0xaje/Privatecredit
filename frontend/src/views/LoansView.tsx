@@ -62,7 +62,8 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
 
   useEffect(() => {
     loadData();
-    const unsubscribe = api.subscribeToEvents(() => {
+    const unsubscribe = api.subscribeToEvents((event: any) => {
+      if (!event || event.type === 'CONNECTED' || event.type === 'ping') return;
       loadData();
       onLoanAction();
     });

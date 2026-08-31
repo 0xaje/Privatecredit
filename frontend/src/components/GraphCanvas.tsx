@@ -7,7 +7,6 @@ import ReactFlow, {
   useEdgesState,
   addEdge,
   ReactFlowProvider,
-  useReactFlow,
 } from 'reactflow';
 import type { Node, Edge, Connection } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -30,8 +29,15 @@ const TYPE_MAP: Record<string, string> = {
   AUCTION: 'auction',
 };
 
-// Radial layout: wallet at center, others in rings
-function autoLayout(backendNodes: any[], fallbackAddress?: string | null): Node[] {
+// Radial layout: wallet at center, others in rings; preserves existing node positions to prevent UI glitching
+function autoLayout(backendNodes: any[], fallbackAddress?: string | null, existingNodes: Node[] = []): Node[] {
+  const existingMap = new Map<string, { x: number; y: number }>();
+  for (const node of existingNodes) {
+    if (node.position) {
+      existingMap.set(node.id, node.position);
+    }
+  }
+
   let wallet = backendNodes.find(n => n.type === 'WALLET');
   const others = backendNodes.filter(n => n.type !== 'WALLET');
 
@@ -50,7 +56,7 @@ function autoLayout(backendNodes: any[], fallbackAddress?: string | null): Node[
     result.push({
       id: wallet.id,
       type: 'wallet',
-      position: { x: cx, y: cy },
+      position: existingMap.get(wallet.id) || { x: cx, y: cy },
       data: { ...wallet.data, nodeType: 'wallet', evidenceCount: others.length },
     });
   }
@@ -60,13 +66,14 @@ function autoLayout(backendNodes: any[], fallbackAddress?: string | null): Node[
   others.forEach((n, i) => {
     const angle = (2 * Math.PI * i) / Math.max(others.length, 1) - Math.PI / 2;
     const rfType = TYPE_MAP[n.type] || 'loan';
+    const defaultPos = {
+      x: cx + radius * Math.cos(angle),
+      y: cy + radius * Math.sin(angle),
+    };
     result.push({
       id: n.id,
       type: rfType,
-      position: {
-        x: cx + radius * Math.cos(angle),
-        y: cy + radius * Math.sin(angle),
-      },
+      position: existingMap.get(n.id) || defaultPos,
       data: {
         ...n.data,
         nodeType: rfType,
@@ -125,7 +132,6 @@ function GraphCanvasInner({ borrowerAddress, onNodeSelect, refreshTrigger }: Gra
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(false);
-  const { fitView } = useReactFlow();
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -143,13 +149,12 @@ function GraphCanvasInner({ borrowerAddress, onNodeSelect, refreshTrigger }: Gra
     setLoading(true);
     api.getGraph(borrowerAddress)
       .then((graphData: any) => {
-        const rfNodes = autoLayout(graphData.nodes || [], borrowerAddress);
+        setNodes((currentNodes) => {
+          const rfNodes = autoLayout(graphData.nodes || [], borrowerAddress, currentNodes);
+          return rfNodes;
+        });
         const rfEdges = mapEdges(graphData.edges || []);
-        setNodes(rfNodes);
         setEdges(rfEdges);
-        setTimeout(() => {
-          fitView({ padding: 0.25, duration: 400 });
-        }, 50);
       })
       .catch((err: any) => {
         console.warn('Graph fetch failed (fallback placeholder):', err.message);
@@ -160,12 +165,9 @@ function GraphCanvasInner({ borrowerAddress, onNodeSelect, refreshTrigger }: Gra
           data: { address: borrowerAddress, nodeType: 'wallet', evidenceCount: 0 },
         }]);
         setEdges([]);
-        setTimeout(() => {
-          fitView({ padding: 0.25, duration: 400 });
-        }, 50);
       })
       .finally(() => setLoading(false));
-  }, [borrowerAddress, refreshTrigger, setNodes, setEdges, fitView]);
+  }, [borrowerAddress, refreshTrigger, setNodes, setEdges]);
 
   const handleNodeClick = (_: React.MouseEvent, node: Node) => {
     onNodeSelect(node);
