@@ -6,6 +6,8 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   addEdge,
+  ReactFlowProvider,
+  useReactFlow,
 } from 'reactflow';
 import type { Node, Edge, Connection } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -29,12 +31,20 @@ const TYPE_MAP: Record<string, string> = {
 };
 
 // Radial layout: wallet at center, others in rings
-function autoLayout(backendNodes: any[]): Node[] {
-  const wallet = backendNodes.find(n => n.type === 'WALLET');
+function autoLayout(backendNodes: any[], fallbackAddress?: string | null): Node[] {
+  let wallet = backendNodes.find(n => n.type === 'WALLET');
   const others = backendNodes.filter(n => n.type !== 'WALLET');
 
   const result: Node[] = [];
-  const cx = 400, cy = 300;
+  const cx = 350, cy = 250;
+
+  if (!wallet && fallbackAddress) {
+    wallet = {
+      id: `wallet_${fallbackAddress.toLowerCase()}`,
+      type: 'WALLET',
+      data: { address: fallbackAddress, balance: '0', eligible: false },
+    };
+  }
 
   if (wallet) {
     result.push({
@@ -46,10 +56,10 @@ function autoLayout(backendNodes: any[]): Node[] {
   }
 
   // Place others in a circle
-  const radius = 250;
+  const radius = 220;
   others.forEach((n, i) => {
     const angle = (2 * Math.PI * i) / Math.max(others.length, 1) - Math.PI / 2;
-    const rfType = TYPE_MAP[n.type] || 'default';
+    const rfType = TYPE_MAP[n.type] || 'loan';
     result.push({
       id: n.id,
       type: rfType,
@@ -78,6 +88,7 @@ const EDGE_COLORS: Record<string, string> = {
   COLLATERAL_FOR: '#f59e0b',
   CONSUMES_CAPACITY: '#ef4444',
   AUCTIONED_FROM: '#f59e0b',
+  BORROW_REQUESTED_BY: '#38bdf8',
 };
 
 function mapEdges(backendEdges: any[]): Edge[] {
@@ -102,7 +113,7 @@ interface GraphCanvasProps {
   refreshTrigger?: number;
 }
 
-export default function GraphCanvas({ borrowerAddress, onNodeSelect, refreshTrigger }: GraphCanvasProps) {
+function GraphCanvasInner({ borrowerAddress, onNodeSelect, refreshTrigger }: GraphCanvasProps) {
   const nodeTypes = useMemo(() => ({
     wallet: WalletNode,
     evidence: EvidenceNode,
@@ -114,6 +125,7 @@ export default function GraphCanvas({ borrowerAddress, onNodeSelect, refreshTrig
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(false);
+  const { fitView } = useReactFlow();
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -131,24 +143,29 @@ export default function GraphCanvas({ borrowerAddress, onNodeSelect, refreshTrig
     setLoading(true);
     api.getGraph(borrowerAddress)
       .then((graphData: any) => {
-        const rfNodes = autoLayout(graphData.nodes || []);
+        const rfNodes = autoLayout(graphData.nodes || [], borrowerAddress);
         const rfEdges = mapEdges(graphData.edges || []);
         setNodes(rfNodes);
         setEdges(rfEdges);
+        setTimeout(() => {
+          fitView({ padding: 0.25, duration: 400 });
+        }, 50);
       })
       .catch((err: any) => {
-        console.warn('Graph fetch failed (backend may be offline):', err.message);
-        // Show a placeholder wallet node
+        console.warn('Graph fetch failed (fallback placeholder):', err.message);
         setNodes([{
-          id: 'wallet-placeholder',
+          id: `wallet_${borrowerAddress.toLowerCase()}`,
           type: 'wallet',
-          position: { x: 400, y: 300 },
+          position: { x: 350, y: 250 },
           data: { address: borrowerAddress, nodeType: 'wallet', evidenceCount: 0 },
         }]);
         setEdges([]);
+        setTimeout(() => {
+          fitView({ padding: 0.25, duration: 400 });
+        }, 50);
       })
       .finally(() => setLoading(false));
-  }, [borrowerAddress, refreshTrigger, setNodes, setEdges]);
+  }, [borrowerAddress, refreshTrigger, setNodes, setEdges, fitView]);
 
   const handleNodeClick = (_: React.MouseEvent, node: Node) => {
     onNodeSelect(node);
@@ -163,7 +180,7 @@ export default function GraphCanvas({ borrowerAddress, onNodeSelect, refreshTrig
       {loading && (
         <div className="graph-loading">
           <div className="loading-spinner" />
-          <span>Loading graph...</span>
+          <span>Loading live graph from CC3...</span>
         </div>
       )}
       {!borrowerAddress && (
@@ -182,21 +199,29 @@ export default function GraphCanvas({ borrowerAddress, onNodeSelect, refreshTrig
         onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
         fitView
-        minZoom={0.3}
-        maxZoom={2}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+        minZoom={0.2}
+        maxZoom={2.5}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.85 }}
       >
         <Controls style={{ fill: '#818cf8', backgroundColor: 'rgba(17, 24, 39, 0.8)', border: '1px solid rgba(129, 140, 248, 0.2)' }} />
         <MiniMap
           nodeColor={(n) => {
-            const colors: Record<string, string> = { wallet: '#818cf8', evidence: '#10b981', eligibility: '#8b5cf6', loan: '#ec4899' };
+            const colors: Record<string, string> = { wallet: '#818cf8', evidence: '#10b981', eligibility: '#8b5cf6', loan: '#ec4899', auction: '#f59e0b' };
             return colors[n.type || ''] || '#6b7280';
           }}
           maskColor="rgba(3, 7, 18, 0.7)"
           style={{ backgroundColor: 'rgba(17, 24, 39, 0.8)', border: '1px solid rgba(129, 140, 248, 0.2)', borderRadius: '8px' }}
         />
-        <Background color="#374151" gap={24} size={1.5} />
+        <Background color="#1e293b" gap={24} size={1.5} />
       </ReactFlow>
     </div>
+  );
+}
+
+export default function GraphCanvas(props: GraphCanvasProps) {
+  return (
+    <ReactFlowProvider>
+      <GraphCanvasInner {...props} />
+    </ReactFlowProvider>
   );
 }

@@ -11,9 +11,23 @@ export interface EvidenceNodeData {
   verified?: boolean;
 }
 
+function formatAmount(val: any): string {
+  if (!val) return '0.00';
+  if (typeof val === 'string' && val.includes('.')) {
+    const num = parseFloat(val);
+    return isNaN(num) ? '0.00' : num.toFixed(2);
+  }
+  try {
+    return Number(formatUnits(val, 18)).toFixed(2);
+  } catch {
+    const num = parseFloat(String(val));
+    return isNaN(num) ? '0.00' : num.toFixed(2);
+  }
+}
+
 const EvidenceNode: React.FC<{ data: EvidenceNodeData; selected?: boolean }> = memo(({ data, selected }) => {
   const isVerified = data.verified !== false;
-  const amountFmt = data.amount ? Number(formatUnits(data.amount, 18)).toFixed(2) : '0.00';
+  const amountFmt = formatAmount(data.amount);
   const typeLabel = data.type === 'INFLOW' ? 'Cash Inflow' : data.type === 'REPAYMENT' ? 'Repayment Track' : 'Obligation';
 
   return (

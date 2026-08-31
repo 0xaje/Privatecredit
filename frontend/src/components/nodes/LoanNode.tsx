@@ -20,8 +20,22 @@ const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> =
   DEFAULTED: { label: 'DEFAULTED', color: '#f43f5e', bg: 'rgba(244,63,94,0.15)' },
 };
 
+function formatAmount(val: any): string {
+  if (!val) return '0.00';
+  if (typeof val === 'string' && val.includes('.')) {
+    const num = parseFloat(val);
+    return isNaN(num) ? '0.00' : num.toFixed(2);
+  }
+  try {
+    return Number(formatUnits(val, 18)).toFixed(2);
+  } catch {
+    const num = parseFloat(String(val));
+    return isNaN(num) ? '0.00' : num.toFixed(2);
+  }
+}
+
 const LoanNode: React.FC<{ data: LoanNodeData; selected?: boolean }> = memo(({ data, selected }) => {
-  const principalFmt = data.principal ? `${Number(formatUnits(data.principal, 18)).toFixed(2)} CTC` : '1.00 CTC';
+  const principalFmt = `${formatAmount(data.principal)} CTC`;
   const statusInfo = STATUS_MAP[String(data.status)] || STATUS_MAP['0'];
   const aprPct = data.aprBps ? `${(data.aprBps / 100).toFixed(1)}%` : '8.5%';
 

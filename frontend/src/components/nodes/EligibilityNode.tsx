@@ -14,10 +14,24 @@ export interface EligibilityNodeData {
 const TIER_NAMES: Record<number, string> = { 0: 'Tier 1 (AAA)', 1: 'Tier 2 (AA)', 2: 'Tier 3 (B)' };
 const TIER_COLORS: Record<number, string> = { 0: '#10b981', 1: '#0ea5e9', 2: '#f59e0b' };
 
+function formatAmount(val: any): string {
+  if (!val) return '0';
+  if (typeof val === 'string' && val.includes('.')) {
+    const num = parseFloat(val);
+    return isNaN(num) ? '0' : num.toFixed(0);
+  }
+  try {
+    return Number(formatUnits(val, 18)).toFixed(0);
+  } catch {
+    const num = parseFloat(String(val));
+    return isNaN(num) ? '0' : num.toFixed(0);
+  }
+}
+
 const EligibilityNode: React.FC<{ data: EligibilityNodeData; selected?: boolean }> = memo(({ data, selected }) => {
   const tierName = TIER_NAMES[data.riskTier] || `Tier ${data.riskTier}`;
   const tierColor = TIER_COLORS[data.riskTier] || '#8b5cf6';
-  const creditFmt = data.maxActiveCredit ? `${Number(formatUnits(data.maxActiveCredit, 18)).toFixed(0)} CTC` : '0 CTC';
+  const creditFmt = `${formatAmount(data.maxActiveCredit)} CTC`;
   const ltvPct = data.maxLtvBps ? `${(data.maxLtvBps / 100).toFixed(0)}%` : '0%';
 
   return (

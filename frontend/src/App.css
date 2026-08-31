@@ -879,3 +879,42 @@ body {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ═══════════════ RESPONSIVE MEDIA QUERIES ═══════════════ */
+@media (max-width: 1200px) {
+  .app-container {
+    grid-template-columns: 240px 1fr 340px;
+  }
+}
+
+@media (max-width: 992px) {
+  .app-container {
+    grid-template-rows: 64px auto auto 40px;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "nav"
+      "workspace"
+      "canvas"
+      "footer";
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+
+  body {
+    overflow: auto;
+  }
+
+  .left-sidebar {
+    display: none;
+  }
+
+  .center-stage {
+    min-height: 500px;
+  }
+
+  .right-workspace {
+    border-left: none;
+    border-bottom: 1px solid var(--panel-border);
+  }
+}

@@ -15,9 +15,23 @@ export interface AuctionNodeData {
   highestBidder?: string;
 }
 
+function formatAmount(val: any): string {
+  if (!val) return '0.00';
+  if (typeof val === 'string' && val.includes('.')) {
+    const num = parseFloat(val);
+    return isNaN(num) ? '0.00' : num.toFixed(2);
+  }
+  try {
+    return Number(formatUnits(val, 18)).toFixed(2);
+  } catch {
+    const num = parseFloat(String(val));
+    return isNaN(num) ? '0.00' : num.toFixed(2);
+  }
+}
+
 export const AuctionNode: React.FC<{ data: AuctionNodeData; selected?: boolean }> = memo(({ data, selected }) => {
   const isSettled = data.status === 'SETTLED';
-  const principalFmt = data.principal ? Number(formatUnits(data.principal, 18)).toFixed(2) : '0.00';
+  const principalFmt = formatAmount(data.principal);
   const discountPct = (data.discountBps / 100).toFixed(0);
 
   return (
