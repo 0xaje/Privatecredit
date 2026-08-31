@@ -25,7 +25,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<'overview' | 'reputation' | 'loans' | 'judge'>('overview');
   const { address } = useCreditcoinWallet();
   const [viewAddress, setViewAddress] = useState<string | null>(null);
-  const activeWallet = address || viewAddress || '0xb096B95B923a9eE0DD63CF565E482784cCFA3dEc';
+  const activeWallet = viewAddress || address || '0xb096B95B923a9eE0DD63CF565E482784cCFA3dEc';
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [evidenceNodeIds, setEvidenceNodeIds] = useState<string[]>([]);
@@ -81,6 +81,16 @@ export default function App() {
           <div className="telemetry-item">
             <span className="telemetry-label">USC Prover</span>
             <span className="telemetry-val" style={{ color: '#34d399' }}>0x0FD2 Active</span>
+          </div>
+          <div className="telemetry-item">
+            <span className="telemetry-label">Active Profile</span>
+            <span className="telemetry-val" style={{ color: address && activeWallet.toLowerCase() === address.toLowerCase() ? '#a855f7' : '#10b981' }}>
+              {address && activeWallet.toLowerCase() === address.toLowerCase()
+                ? `Wallet (${address.slice(0, 6)}...)`
+                : activeWallet.toLowerCase() === '0xbf6301d7bca9f23a63a2d1ed513d5120dbb2288e'
+                ? 'Lender (0xbf63...)'
+                : 'Borrower (0xb096...)'}
+            </span>
           </div>
           <div className="telemetry-item">
             <span className="telemetry-label">Verified Nodes</span>
