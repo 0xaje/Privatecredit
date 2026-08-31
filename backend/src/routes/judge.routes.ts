@@ -3,10 +3,10 @@ import { graphStore } from '../services/GraphStore';
 
 export const judgeRouter = Router();
 
-judgeRouter.get('/:borrower', (req: Request, res: Response) => {
+judgeRouter.get('/:borrower', async (req: Request, res: Response) => {
     try {
         const borrower = req.params.borrower as string;
-        const graph = graphStore.getGraphForBorrower(borrower);
+        const graph = await graphStore.getGraphForBorrower(borrower);
         
         // In a full implementation, this aggregates on-chain Capacity, Repayment info, and Artefacts.
         // For MVP, we'll return the graph which contains the Attestcoin references and Creditcoin txHashes.
