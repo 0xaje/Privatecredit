@@ -3,12 +3,12 @@
 [![Live dApp App](https://img.shields.io/badge/Live_dApp-privatecredit--beige.vercel.app-0ea5e9?style=for-the-badge&logo=vercel)](https://privatecredit-beige.vercel.app/)
 [![Render API Backend](https://img.shields.io/badge/Backend_API-privatecredit.onrender.com-10b981?style=for-the-badge&logo=render)](https://privatecredit.onrender.com/health)
 [![Network](https://img.shields.io/badge/Creditcoin_CC3-Chain_102031-8b5cf6?style=for-the-badge)](https://creditcoin.blockscout.com)
-[![USC Precompile](https://img.shields.io/badge/USC_Precompile-0x0FD2_Active-3b82f6?style=for-the-badge)](https://creditcoin.blockscout.com)
+[![Attestcoin Precompile](https://img.shields.io/badge/Attestcoin_Precompile-0x0FD2_Active-3b82f6?style=for-the-badge)](https://creditcoin.blockscout.com)
 
 > **Creditcoin CC3 Testnet Hackathon Official Submission**  
 > **Official Web dApp**: [https://privatecredit-beige.vercel.app/](https://privatecredit-beige.vercel.app/)  
 > **Live API Gateway**: [https://privatecredit.onrender.com](https://privatecredit.onrender.com)  
-> Autonomous Cross-Chain Credit Underwriting & Peer-to-Peer Lending Marketplace built natively for **Creditcoin CC3 Testnet** (`Chain ID 102031`), powered by **Attestcoin Universal Smart Contracts (USC)** and Creditcoin's native `0x0FD2` BlockProver precompile.
+> Autonomous Cross-Chain Credit Underwriting & Peer-to-Peer Lending Marketplace built natively for **Creditcoin CC3 Testnet** (`Chain ID 102031`), powered by the **Attestcoin Protocol** (formerly Universal Smart Contracts / USC) and Creditcoin's native `0x0FD2` BlockProver precompile.
 
 ---
 
@@ -16,14 +16,14 @@
 
 Uncollateralized and under-collateralized lending in Web3 requires verifiable, tamper-proof credit history across disparate blockchains. **PrivateCredit Graph** brings a visual, graph-first intelligence workspace to credit underwriting.
 
-By ingesting cross-chain reputation data (Ethereum Mainnet/Sepolia inflows, Arbitrum repayments, and cross-chain obligations) via the `@gluwa/usc-sdk`, evidence is proved against Creditcoin's native `0x0FD2` BlockProver precompile. Once verified on-chain via `USCVerifier.sol`, an off-chain Risk Engine evaluates the borrower's evidence graph to issue a deterministic **Eligibility Badge** and maximum **LTV / Credit Capacity** bounds on Creditcoin.
+By ingesting cross-chain reputation data (Ethereum Mainnet/Sepolia inflows, Arbitrum repayments, and cross-chain obligations) via the Attestcoin Protocol SDK (`@gluwa/usc-sdk`), evidence is proved against Creditcoin's native `0x0FD2` BlockProver precompile. Once verified on-chain via `USCVerifier.sol`, an off-chain Risk Engine evaluates the borrower's evidence graph to issue a deterministic **Eligibility Badge** and maximum **LTV / Credit Capacity** bounds on Creditcoin.
 
 ---
 
 ## Key System Features
 
-### 1. Native Creditcoin USC & 0x0FD2 Precompile Proofing
-- Uses `@gluwa/usc-sdk` proof builder service to construct SPV header continuity and Merkle receipt proofs.
+### 1. Native Attestcoin Protocol & 0x0FD2 Precompile Proofing
+- Uses the Attestcoin Protocol SDK (`@gluwa/usc-sdk`) proof builder service to construct SPV header continuity and Merkle receipt proofs.
 - Executes `USCVerifier.verifyEvidence()` directly against Creditcoin's `0x0FD2` precompile.
 - Rejects replayed evidence, unconfigured source tokens, and invalid cross-chain transfer semantics.
 
@@ -48,6 +48,39 @@ By ingesting cross-chain reputation data (Ethereum Mainnet/Sepolia inflows, Arbi
 
 ---
 
+## Attestcoin Protocol Integration
+
+The Attestcoin Protocol is the trust root of this system: no credit decision is reachable
+without a proof that the `0x0FD2` BlockProver precompile has accepted.
+
+**Integration path** ([`contracts/usc/USCVerifier.sol`](contracts/usc/USCVerifier.sol)):
+
+1. **Proof construction (off-chain).** `AttestcoinService` calls the Attestcoin Protocol SDK
+   (`@gluwa/usc-sdk`) proof builder to produce the SPV header-continuity proof and the Merkle
+   receipt proof for a source-chain transaction.
+2. **Native verification (on-chain).** `USCVerifier.verifyEvidence()` calls
+   `INativeQueryVerifier.verify()` at `0x0000000000000000000000000000000000000FD2`. If the
+   precompile returns false, the call reverts with `InvalidProof` and nothing is recorded.
+3. **Independent semantic re-validation.** A passing proof establishes only that the transaction
+   is real. `USCVerifier` then decodes the receipt with `EvmV1Decoder` and independently checks
+   that the receipt succeeded, that a `Transfer` log came from a configured source token, and
+   that the transfer direction matches the claimed evidence type (an INFLOW must credit the
+   borrower; a REPAYMENT must debit them). Caller-supplied amounts are never trusted — the
+   amount is taken from the decoded log.
+4. **Replay protection, in three independent layers.** `processedQueries` rejects a re-submitted
+   proof; `processedEvidence` rejects the same underlying transaction re-proved under a different
+   proof envelope (for example at a different block height); `evidenceUsedForEligibility` prevents
+   one verified inflow being spent for two eligibility badges.
+5. **Eligibility issuance.** `registerEligibilityFromEvidence()` is the only path that can write a
+   badge, and it consumes verified evidence IDs in strictly ascending order, which makes
+   in-batch duplicates unrepresentable.
+
+Each of these five properties is covered by the test suite in
+[`test/USCVerifier.ts`](test/USCVerifier.ts), which installs a mock BlockProver at `0x0FD2` via
+`setCode` so that both the accepting and rejecting precompile paths can be exercised locally.
+
+---
+
 ## Live Creditcoin CC3 Testnet Deployment Registry
 
 All core smart contracts are compiled with Solidity `0.8.23` (`viaIR` optimizer enabled) and deployed live on **Creditcoin CC3 Testnet (`Chain ID 102031`)**:
@@ -63,7 +96,7 @@ All core smart contracts are compiled with Solidity `0.8.23` (`viaIR` optimizer 
 | **`USCVerifier`** | `0x6c35e07Ca0E0234220145F33f8Bedb41eFde45b6` | [Blockscout](https://creditcoin.blockscout.com/address/0x6c35e07Ca0E0234220145F33f8Bedb41eFde45b6) |
 | **`EvmV1Decoder`** | `0x70BD41c4A9E7c849337549CD6EEb71266f2Ddd96` | [Blockscout](https://creditcoin.blockscout.com/address/0x70BD41c4A9E7c849337549CD6EEb71266f2Ddd96) |
 | **`RepaymentRegistry`** | `0xa2DBeB94c0a151e071A6c29999FE1c6B38217b85` | [Blockscout](https://creditcoin.blockscout.com/address/0xa2DBeB94c0a151e071A6c29999FE1c6B38217b85) |
-| **`USC BlockProver Precompile`** | `0x0000000000000000000000000000000000000FD2` | Native Precompile |
+| **`Attestcoin BlockProver Precompile`** | `0x0000000000000000000000000000000000000FD2` | Native Precompile |
 
 ---
 
@@ -77,7 +110,7 @@ All core smart contracts are compiled with Solidity `0.8.23` (`viaIR` optimizer 
                                                   │
                                                   ▼
                                ┌────────────────────────────────────────┐
-                               │   @gluwa/usc-sdk Proof Builder         │
+                               │   Attestcoin Protocol SDK (usc-sdk)    │
                                │   (SPV Header & Merkle Proof Gen)      │
                                └──────────────────┬─────────────────────┘
                                                   │
@@ -174,7 +207,7 @@ npm run dev
 Run the full automated test suite to verify contract invariants, policy engine logic, and frontend build integrity:
 
 ```bash
-# Test smart contracts
+# Test smart contracts (20 tests: 5 Solidity unit, 15 integration/Attestcoin)
 npm run compile
 npm test
 
