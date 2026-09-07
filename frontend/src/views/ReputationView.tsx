@@ -233,7 +233,10 @@ export default function ReputationView({ borrowerAddress, evidenceNodeIds, onEli
           </div>
 
           <div className="form-group">
-            <label className="form-label">Source Transaction Hash</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <label className="form-label" style={{ margin: 0 }}>Source Transaction Hash</label>
+              <span style={{ fontSize: '0.65rem', color: '#38bdf8' }}>Sepolia Etherscan Proof</span>
+            </div>
             <input
               type="text"
               value={txHash}
@@ -241,6 +244,30 @@ export default function ReputationView({ borrowerAddress, evidenceNodeIds, onEli
               className="styled-input"
               placeholder="0x..."
             />
+            <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+              <button
+                type="button"
+                className="preset-chip"
+                style={{ fontSize: '0.65rem', padding: '3px 8px', background: 'rgba(14,165,233,0.15)', borderColor: 'rgba(14,165,233,0.4)', color: '#38bdf8' }}
+                onClick={() => {
+                  setEventType('INFLOW');
+                  setTxHash('0x7a250d5630b4cf539739df2c5dacb4c659f2488d10c0e788734914c6dfac0c79');
+                }}
+              >
+                Auto-Fill Sample Inflow
+              </button>
+              <button
+                type="button"
+                className="preset-chip"
+                style={{ fontSize: '0.65rem', padding: '3px 8px', background: 'rgba(16,185,129,0.15)', borderColor: 'rgba(16,185,129,0.4)', color: '#34d399' }}
+                onClick={() => {
+                  setEventType('REPAYMENT');
+                  setTxHash('0x4b81920acb0918239014902189401294109240912490124901294012490');
+                }}
+              >
+                Auto-Fill Sample Repay
+              </button>
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>

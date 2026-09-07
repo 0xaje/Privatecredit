@@ -49,7 +49,7 @@ export const config = {
   rpcUrl,
   proofBuilderUrl: process.env.CREDITCOIN_PROOF_BUILDER_URL || deployment.attestcoin.proofBuilderUrl,
   explorerUrl: process.env.CREDITCOIN_EXPLORER || deployment.explorerUrl,
-  sourceToken: process.env.SOURCE_TOKEN_ADDRESS || '',
+  sourceToken: process.env.SOURCE_TOKEN_ADDRESS || '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
   sourceChainKey: Number(process.env.SOURCE_CHAIN_KEY || '1'),
   sourceChainId: Number(process.env.SOURCE_CHAIN_ID || '11155111'),
   addresses,
