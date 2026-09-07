@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import type { Node } from 'reactflow';
 import GraphCanvas from './components/GraphCanvas';
+import Inspector from './components/Inspector';
 import ReputationView from './views/ReputationView';
 import LoansView from './views/LoansView';
 import JudgeView from './views/JudgeView';
@@ -307,19 +308,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="glass-stat-card">
-              <div className="glass-stat-label">Selected Graph Node</div>
-              {selectedNode ? (
-                <div style={{ marginTop: '8px', fontSize: '0.82rem' }}>
-                  <div style={{ fontWeight: 700, color: '#fff' }}>ID: {selectedNode.id}</div>
-                  <div style={{ color: '#94a3b8' }}>Type: {selectedNode.type}</div>
-                </div>
-              ) : (
-                <div style={{ marginTop: '6px', fontSize: '0.78rem', color: '#94a3b8' }}>
-                  Click any node on the graph canvas to inspect its cryptographic proof parameters.
-                </div>
-              )}
-            </div>
+            <Inspector node={selectedNode} />
 
             <button
               className="execute-btn"
