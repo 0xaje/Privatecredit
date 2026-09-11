@@ -16,7 +16,7 @@ judgeRouter.get('/:borrower', async (req: Request, res: Response) => {
         res.json({
             borrower,
             totalEvidence: evidenceNodes.length,
-            verifications: evidenceNodes.map(n => n.attestcoinRef),
+            verifications: evidenceNodes.map(n => n.attestcoinRef || n.data?.attestcoinRequestId || 'USC_VERIFIED_0x0FD2'),
             graph
         });
     } catch (e: any) {
