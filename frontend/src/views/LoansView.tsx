@@ -38,6 +38,8 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
   // Repayment Form
   const [repayLoanId, setRepayLoanId] = useState<string>('1');
   const [repayAmountCTC, setRepayAmountCTC] = useState<string>('20.15');
+  const [loanDetails, setLoanDetails] = useState<any>(null);
+  const [loadingLoan, setLoadingLoan] = useState<boolean>(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -70,6 +72,33 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
     return () => unsubscribe();
   }, [loadData, onLoanAction]);
 
+  useEffect(() => {
+    if (!repayLoanId || isNaN(Number(repayLoanId))) {
+      setLoanDetails(null);
+      return;
+    }
+    setLoadingLoan(true);
+    Promise.all([
+      api.getLoan(Number(repayLoanId)).catch(() => null),
+      api.getTotalOwed(Number(repayLoanId)).catch(() => null),
+    ]).then(([loanRes, owedRes]) => {
+      if (loanRes && loanRes.loan && loanRes.loan.borrower !== '0x0000000000000000000000000000000000000000') {
+        const totalOwedFmt = owedRes?.totalOwed ? (Number(formatUnits(owedRes.totalOwed, 18))).toFixed(4) : '';
+        setLoanDetails({
+          ...loanRes.loan,
+          totalOwedFormatted: totalOwedFmt,
+        });
+        if (totalOwedFmt) {
+          setRepayAmountCTC(totalOwedFmt);
+        }
+      } else {
+        setLoanDetails(null);
+      }
+    }).finally(() => {
+      setLoadingLoan(false);
+    });
+  }, [repayLoanId]);
+
   const availNum = capacity ? Number(formatUnits(capacity.available, 18)) : 0;
   const usedNum = capacity ? Number(formatUnits(capacity.used, 18)) : 0;
 
@@ -91,7 +120,11 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
     } catch (error: any) {
       setIsError(true);
       let msg = error?.reason || error?.info?.error?.message || error?.data?.message || error?.shortMessage || error?.message || 'Transaction failed';
-      if (msg.includes('BorrowerCannotLend')) {
+      if (msg.includes('NotBorrower')) {
+        msg = 'Repayment reverted: Only the borrower who originated this loan can repay it (LoanVault strictly guards collateral returns). Please switch to the borrower wallet in MetaMask.';
+      } else if (msg.includes('LoanNotActive')) {
+        msg = 'Repayment reverted: This loan is not active (it has already been repaid or defaulted).';
+      } else if (msg.includes('BorrowerCannotLend')) {
         msg = 'Cannot fund your own borrow request. Switch to a different wallet (e.g. Deployer wallet) to act as lender.';
       } else if (msg.includes('RequestNotOpen')) {
         msg = 'This borrow request is no longer open.';
@@ -99,6 +132,8 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
         msg = 'Offer terms (APR, duration, or deposit amount) are out of bounds for this request.';
       } else if (msg.includes('InsufficientEligibility')) {
         msg = 'Borrower does not have active eligibility registered.';
+      } else if (msg.includes('execution reverted')) {
+        msg = 'Transaction reverted on Creditcoin CC3. Check that your connected wallet is the authorized borrower for this loan ID and has sufficient tCTC.';
       }
       setResult(msg);
     } finally {
@@ -192,6 +227,11 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
 
   const selectedRequest = openRequests.find((r: any) => String(r.requestId) === String(targetRequestId));
   const isOwnRequest = Boolean(selectedRequest && activeAddress && selectedRequest.borrower?.toLowerCase() === activeAddress.toLowerCase());
+  const isBorrowerMismatch = Boolean(
+    activeAddress &&
+    loanDetails?.borrower &&
+    activeAddress.toLowerCase() !== loanDetails.borrower.toLowerCase()
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -515,18 +555,94 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
             </div>
           </div>
 
+          {loadingLoan && (
+            <div style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '4px 0 10px 0' }}>
+              Querying Creditcoin CC3 LoanVault...
+            </div>
+          )}
+
+          {loanDetails && (
+            <div className="glass-stat-card" style={{ marginBottom: '14px', background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f8fafc' }}>
+                  Loan #{loanDetails.loanId} Details
+                </span>
+                <span style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  background: loanDetails.status === 0 ? 'rgba(16,185,129,0.2)' : 'rgba(148,163,184,0.2)',
+                  color: loanDetails.status === 0 ? '#34d399' : '#94a3b8',
+                }}>
+                  {loanDetails.status === 0 ? 'ACTIVE' : loanDetails.status === 1 ? 'REPAID' : 'DEFAULTED'}
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.75rem', marginBottom: '8px' }}>
+                <div>
+                  <span style={{ color: '#94a3b8', fontSize: '0.68rem', display: 'block' }}>Borrower</span>
+                  <span style={{ fontFamily: 'monospace', color: '#38bdf8' }}>
+                    {loanDetails.borrower.slice(0, 6)}...{loanDetails.borrower.slice(-4)}
+                  </span>
+                </div>
+                <div>
+                  <span style={{ color: '#94a3b8', fontSize: '0.68rem', display: 'block' }}>Lender</span>
+                  <span style={{ fontFamily: 'monospace', color: '#cbd5e1' }}>
+                    {loanDetails.lender.slice(0, 6)}...{loanDetails.lender.slice(-4)}
+                  </span>
+                </div>
+                <div>
+                  <span style={{ color: '#94a3b8', fontSize: '0.68rem', display: 'block' }}>Principal</span>
+                  <span style={{ fontWeight: 600, color: '#f8fafc' }}>
+                    {(Number(formatUnits(loanDetails.principal, 18))).toFixed(2)} CTC
+                  </span>
+                </div>
+                <div>
+                  <span style={{ color: '#94a3b8', fontSize: '0.68rem', display: 'block' }}>Total Owed (w/ Interest)</span>
+                  <span style={{ fontWeight: 700, color: '#34d399' }}>
+                    {loanDetails.totalOwedFormatted || '0'} CTC
+                  </span>
+                </div>
+              </div>
+
+              {isBorrowerMismatch && (
+                <div style={{
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.35)',
+                  color: '#fca5a5',
+                  fontSize: '0.72rem',
+                  lineHeight: '1.4',
+                }}>
+                  <strong>⚠️ Wallet Mismatch:</strong> Your connected wallet (<code>{activeAddress.slice(0, 6)}...{activeAddress.slice(-4)}</code>) is not the borrower of Loan #{repayLoanId}. Creditcoin's LoanVault contract only allows the originating borrower (<code>{loanDetails.borrower.slice(0, 6)}...{loanDetails.borrower.slice(-4)}</code>) to execute repayment so collateral is safely refunded to them.
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="form-group">
             <div className="form-label-row">
               <label className="form-label">Repayment Amount (Principal + Interest)</label>
+              {loanDetails?.totalOwedFormatted && (
+                <span
+                  className="form-hint"
+                  style={{ color: '#34d399', cursor: 'pointer', fontSize: '0.7rem' }}
+                  onClick={() => setRepayAmountCTC(loanDetails.totalOwedFormatted)}
+                >
+                  Auto-fill Total ({loanDetails.totalOwedFormatted} CTC)
+                </span>
+              )}
             </div>
             <div className="input-container">
               <input
                 type="number"
-                step="0.01"
+                step="0.0001"
                 value={repayAmountCTC}
                 onChange={e => setRepayAmountCTC(e.target.value)}
                 className="styled-input"
-                placeholder="1.02"
+                placeholder="20.05"
               />
               <span className="input-currency-tag">CTC</span>
             </div>
@@ -541,11 +657,20 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
 
           <button
             className="execute-btn"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
+            style={{
+              background: isBorrowerMismatch
+                ? 'rgba(255,255,255,0.05)'
+                : 'linear-gradient(135deg, #6366f1, #4f46e5)',
+              color: isBorrowerMismatch ? '#94a3b8' : '#ffffff',
+            }}
             onClick={handleRepaySubmit}
-            disabled={submitting || Number(repayAmountCTC) <= 0}
+            disabled={submitting || Number(repayAmountCTC) <= 0 || isBorrowerMismatch}
           >
-            {submitting ? 'Awaiting Signature...' : 'Execute Full Repayment'}
+            {submitting
+              ? 'Awaiting Signature...'
+              : isBorrowerMismatch
+              ? 'Switch to Borrower Wallet in MetaMask to Repay'
+              : 'Execute Full Repayment'}
             <CheckCircle2 className="w-4 h-4" />
           </button>
         </div>
