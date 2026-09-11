@@ -77,26 +77,30 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
       setLoanDetails(null);
       return;
     }
-    setLoadingLoan(true);
-    Promise.all([
-      api.getLoan(Number(repayLoanId)).catch(() => null),
-      api.getTotalOwed(Number(repayLoanId)).catch(() => null),
-    ]).then(([loanRes, owedRes]) => {
-      if (loanRes && loanRes.loan && loanRes.loan.borrower !== '0x0000000000000000000000000000000000000000') {
-        const totalOwedFmt = owedRes?.totalOwed ? (Number(formatUnits(owedRes.totalOwed, 18))).toFixed(4) : '';
-        setLoanDetails({
-          ...loanRes.loan,
-          totalOwedFormatted: totalOwedFmt,
-        });
-        if (totalOwedFmt) {
-          setRepayAmountCTC(totalOwedFmt);
+    const timer = setTimeout(() => {
+      setLoadingLoan(true);
+      Promise.all([
+        api.getLoan(Number(repayLoanId)).catch(() => null),
+        api.getTotalOwed(Number(repayLoanId)).catch(() => null),
+      ]).then(([loanRes, owedRes]) => {
+        if (loanRes && loanRes.loan && loanRes.loan.borrower !== '0x0000000000000000000000000000000000000000') {
+          const totalOwedFmt = owedRes?.totalOwed ? (Number(formatUnits(owedRes.totalOwed, 18))).toFixed(4) : '';
+          setLoanDetails({
+            ...loanRes.loan,
+            totalOwedFormatted: totalOwedFmt,
+          });
+          if (totalOwedFmt) {
+            setRepayAmountCTC(totalOwedFmt);
+          }
+        } else {
+          setLoanDetails(null);
         }
-      } else {
-        setLoanDetails(null);
-      }
-    }).finally(() => {
-      setLoadingLoan(false);
-    });
+      }).finally(() => {
+        setLoadingLoan(false);
+      });
+    }, 250);
+
+    return () => clearTimeout(timer);
   }, [repayLoanId]);
 
   const availNum = capacity ? Number(formatUnits(capacity.available, 18)) : 0;
@@ -551,15 +555,11 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
                 className="styled-input"
                 placeholder="1"
               />
-              <span className="input-currency-tag">#ID</span>
+              <span className="input-currency-tag" style={{ color: loadingLoan ? '#38bdf8' : undefined }}>
+                {loadingLoan ? 'Querying...' : '#ID'}
+              </span>
             </div>
           </div>
-
-          {loadingLoan && (
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '4px 0 10px 0' }}>
-              Querying Creditcoin CC3 LoanVault...
-            </div>
-          )}
 
           {loanDetails && (
             <div className="glass-stat-card" style={{ marginBottom: '14px', background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(255,255,255,0.1)' }}>
