@@ -54,12 +54,24 @@ export class GraphStore {
     eventStream.broadcast('NODE_ADDED', node);
   }
 
-  updateNode(id: string, patch: Partial<GraphNode>): GraphNode {
+  updateNode(id: string, patch: Partial<GraphNode>, broadcast = true): GraphNode {
     const current = database.getNode(id);
     if (!current) throw new Error(`Node not found: ${id}`);
-    const updated = { ...current, ...patch };
+
+    // Only update and broadcast if something actually changed
+    const mergedData = patch.data ? { ...current.data, ...patch.data } : current.data;
+    const isDataEqual = JSON.stringify(current.data) === JSON.stringify(mergedData);
+    const isVerifiedEqual = patch.verified === undefined || patch.verified === current.verified;
+
+    if (isDataEqual && isVerifiedEqual) {
+      return current;
+    }
+
+    const updated = { ...current, ...patch, data: mergedData };
     database.setNode(id, updated);
-    eventStream.broadcast('NODE_UPDATED', updated);
+    if (broadcast) {
+      eventStream.broadcast('NODE_UPDATED', updated);
+    }
     return updated;
   }
 
@@ -107,7 +119,7 @@ export class GraphStore {
             ...database.getNode(wNodeId)!.data,
             balance: balanceCTC,
           },
-        });
+        }, false);
       }
 
       // 2. Check On-Chain Eligibility
@@ -143,7 +155,7 @@ export class GraphStore {
               verified: true,
             });
           }
-          this.updateNode(wNodeId, { data: { ...database.getNode(wNodeId)!.data, eligible: true } });
+          this.updateNode(wNodeId, { data: { ...database.getNode(wNodeId)!.data, eligible: true } }, false);
         }
       }
 

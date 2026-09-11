@@ -66,11 +66,13 @@ export default function LoansView({ borrowerAddress, onLoanAction }: LoansViewPr
     loadData();
     const unsubscribe = api.subscribeToEvents((event: any) => {
       if (!event || event.type === 'CONNECTED' || event.type === 'ping') return;
-      loadData();
-      onLoanAction();
+      // Only reload loan tables if an auction or loan-relevant event occurred
+      if (event.type === 'AUCTION_UPDATED' || event.type === 'LOAN_ACTION') {
+        loadData();
+      }
     });
     return () => unsubscribe();
-  }, [loadData, onLoanAction]);
+  }, [loadData]);
 
   useEffect(() => {
     if (!repayLoanId || isNaN(Number(repayLoanId))) {

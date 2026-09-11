@@ -132,6 +132,7 @@ function GraphCanvasInner({ borrowerAddress, onNodeSelect, refreshTrigger }: Gra
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -146,7 +147,10 @@ function GraphCanvasInner({ borrowerAddress, onNodeSelect, refreshTrigger }: Gra
       return;
     }
 
-    setLoading(true);
+    if (!hasLoadedOnce) {
+      setLoading(true);
+    }
+
     api.getGraph(borrowerAddress)
       .then((graphData: any) => {
         setNodes((currentNodes) => {
@@ -166,8 +170,11 @@ function GraphCanvasInner({ borrowerAddress, onNodeSelect, refreshTrigger }: Gra
         }]);
         setEdges([]);
       })
-      .finally(() => setLoading(false));
-  }, [borrowerAddress, refreshTrigger, setNodes, setEdges]);
+      .finally(() => {
+        setLoading(false);
+        setHasLoadedOnce(true);
+      });
+  }, [borrowerAddress, refreshTrigger, setNodes, setEdges, hasLoadedOnce]);
 
   const handleNodeClick = (_: React.MouseEvent, node: Node) => {
     onNodeSelect(node);
@@ -179,7 +186,7 @@ function GraphCanvasInner({ borrowerAddress, onNodeSelect, refreshTrigger }: Gra
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {loading && (
+      {!hasLoadedOnce && loading && (
         <div className="graph-loading">
           <div className="loading-spinner" />
           <span>Loading live graph from CC3...</span>
@@ -200,10 +207,9 @@ function GraphCanvasInner({ borrowerAddress, onNodeSelect, refreshTrigger }: Gra
         onNodeClick={handleNodeClick}
         onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
-        fitView
         minZoom={0.2}
         maxZoom={2.5}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.85 }}
+        defaultViewport={{ x: 50, y: 50, zoom: 0.85 }}
       >
         <Controls style={{ fill: '#818cf8', backgroundColor: 'rgba(17, 24, 39, 0.8)', border: '1px solid rgba(129, 140, 248, 0.2)' }} />
         <MiniMap
